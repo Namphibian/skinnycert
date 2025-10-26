@@ -1,0 +1,108 @@
+name: skinnycert-stack
+services:
+    # -------------------------------
+    # Rust REST API Service
+    # -------------------------------
+    rest-api:
+        image: namphibian/skinnycert
+        container_name: skinnycert-api-server
+        hostname: api.svc.docker.local
+#      build: .
+#        depends_on:
+#            - gateway
+        environment:
+            RUST_LOG: info
+            SERVER_PORT: 3000           # API listens on this port internally
+            SERVER_ADDRESS: 127.0.0.1  # Only accessible to sidecar
+            WORKER_THREADS: 32
+        # Expose API port directly for troubleshooting / bypassing NGINX
+        ports:
+            - "3000:3000" # port that skinnycert listens on
+            - "8443:8443" # https port must use MLTS
+            - "80:80"
+        networks:
+            skinnycert:
+                ipv4_address: 20.5.0.4
+
+    # -------------------------------
+    # NGINX Sidecar (TLS/mTLS termination)
+    # -------------------------------
+    sidecar:
+        image: nginx:stable-alpine3.21-slim
+        container_name: nginx-sidecar
+        network_mode: "service:rest-api"   # Shares REST API network stack
+        volumes:
+            - type: bind
+              source: ./sidecar/etc/nginx/nginx.conf
+              target: /etc/nginx/nginx.conf
+              read_only: true
+            - type: bind
+              source: ./certificates/mtls/ca/ca.crt
+              target: /etc/nginx/conf.d/ca.crt
+              read_only: true
+            - type: bind
+              source: ./certificates/mtls/sidecar/sidecar.crt
+              target: /etc/nginx/conf.d/sidecar.crt
+              read_only: true
+            - type: bind
+              source: ./certificates/mtls/sidecar/sidecar.key
+              target: /etc/nginx/conf.d/sidecar.key
+              read_only: true
+
+
+    # -------------------------------
+    # API Gateway (APISIX)
+    # -------------------------------
+    gateway:
+        image: apache/apisix:${APISIX_IMAGE_TAG:-3.9.0-debian}
+        container_name: api-six
+        hostname: gateway.svc.docker.local
+        restart: always
+        volumes:
+            - ./gateway/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+        environment:
+            - APISIX_STAND_ALONE=true
+        ports:
+            - "9443:9443/tcp"  # Public gateway port
+        networks:
+            skinnycert:
+                ipv4_address: 20.5.0.2
+#        # Optional healthcheck to ensure gateway readiness
+#        healthcheck:
+#            test: ["CMD", "curl", "-f", "https://localhost:9443/"]
+#            interval: 5s
+#            retries: 5
+
+    # -------------------------------
+    # Benchmarking container (Taurus)
+    # -------------------------------
+    benchmark:
+        container_name: taurus
+        hostname: taurus.svc.docker.local
+        stdin_open: true
+        tty: true
+        image: blazemeter/taurus
+        restart: always
+        entrypoint: /bin/sh
+        volumes:
+            - type: bind
+              source: ./benchmarks/configs
+              target: /bzt-configs
+              read_only: true
+            - type: bind
+              source: ./benchmarks/artifacts
+              target: /tmp/artifacts
+              read_only: false
+        networks:
+            skinnycert:
+                ipv4_address: 20.5.0.5
+
+# -------------------------------
+# Custom bridge network
+# -------------------------------
+networks:
+    skinnycert:
+        driver: bridge
+        ipam:
+            config:
+                - subnet: 20.5.0.0/24

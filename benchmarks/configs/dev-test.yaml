@@ -1,0 +1,41 @@
+execution:
+  - scenario: health
+    concurrency: 128
+    ramp-up: 10s
+    hold-for: 1m
+    executor: gatling
+#  - scenario: notes
+#    concurrency: 24
+#    ramp-up: 10s
+#    hold-for: 1m
+#    executor: gatling
+
+scenarios:
+  health:
+    retrieve-resources: false
+    headers:
+        "Authorization": "Basic aGVhbHRoOmhlYWx0aA=="
+    requests:
+      - url: https://gateway.svc.docker.local:9443/health
+#  notes:
+#    retrieve-resources: false
+#    headers:
+#      "Authorization": "Basic bm90ZTpub3Rl"
+#    requests:
+#      - url: https://gateway.svc.docker.local:9443/note
+##
+services:
+- module: monitoring
+  ~local:
+  - interval: 5s   # polling interval
+    logging: True # local monitoring logs will be saved to "local_monitoring_logs.csv" in the artifacts dir
+    metrics:
+    - cpu
+    - disk-space
+    - engine-loop
+
+
+modules:
+    gatling:
+        properties:
+            version: 3.11.3

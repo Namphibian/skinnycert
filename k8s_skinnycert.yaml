@@ -1,0 +1,518 @@
+#apiVersion: v1
+#kind: Namespace
+#metadata:
+#  name: skinnycert
+
+---
+# -------------------------------
+# ConfigMaps & Secrets
+# -------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: skinnycert
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+    
+    error_log  /var/log/nginx/error.log notice;
+    pid        /var/run/nginx.pid;
+    
+    events {
+    worker_connections  65536;
+    }
+    
+    http {
+    upstream rest_api {
+      server 127.0.0.1:3000;
+    }
+    
+    # Plain HTTP — useful for debugging / basic connectivity tests
+    server {
+      listen 80;
+      listen [::]:80;
+      server_name _;
+      location / {
+        proxy_pass http://rest_api;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 10s;
+        proxy_send_timeout 10s;
+      }
+    }
+    
+    # HTTPS + mTLS
+      server {
+        listen 8443 ssl;
+        ssl_certificate /etc/nginx/conf.d/sidecar.crt;
+        ssl_certificate_key /etc/nginx/conf.d/sidecar.key;
+        ssl_trusted_certificate /etc/nginx/conf.d/ca.crt;
+        ssl_client_certificate /etc/nginx/conf.d/ca.crt;
+        ssl_verify_client on;
+    
+        client_body_timeout 5;
+        client_header_timeout 5;
+        keepalive_timeout 7;
+        send_timeout 5;
+        location / {
+          proxy_pass http://rest_api;
+          proxy_set_header Host $host;
+          proxy_set_header X-Real-IP $remote_addr;
+          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+          proxy_connect_timeout 5s;
+          proxy_read_timeout 10s;
+          proxy_send_timeout 10s;
+        }
+      }
+    }
+
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sidecar-certs
+  namespace: skinnycert
+type: Opaque
+data:
+  ca.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURKekNDQWcrZ0F3SUJBZ0lVWXN0MTdsZGFTU0tkV09pbklUYnU3VUt4cUVFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0l6RU1NQW9HQTFVRUN3d0RkMlZpTVJNd0VRWURWUVFEREFwd2NtbDJZWFJsWDJOaE1CNFhEVEkwTURVeApPVEExTXpVd01Wb1hEVE0wTURVeE56QTFNelV3TVZvd0l6RU1NQW9HQTFVRUN3d0RkMlZpTVJNd0VRWURWUVFECkRBcHdjbWwyWVhSbFgyTmhNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXVudU8KVExNTXhrQkhlWDJBQnljZ09oUkJ2amhqbnFEeThuTFdORFV1WlRuaHMwclB6OXNvbkFMSWc2UjNsZ3pLTk5uZApiRURwWkhzZWR5SGVySUpOMDhrenhRVkRlZkJKc2tNOFB2NnhxTDBJa3lXdmlDMS9mc2ZhWWhiMXRqOGhyK0pxClZ2V213STBSS3JEK21ibmw2K29sS3hCTERvd2lhcTR3WWFTOU5vbk95Z3JRUjJzY2hyVXluaGxQMzVsNGMxVnEKMERhb0xCTTVCSk9ESlcxLzdrbjcwMEFzYmV2czJFc2VlTkkyRjVDSGpaSzZ4VDRRMkwwUXBsY1dnYnU3OVJGRApCRmdZS0xpcGZlWFNpRVBia25PdkhsMGYzbGdTdWtSOFhRNElUVG5tekZVc0RlMFd5QVNZS2RRcEZtWmlBV0dXCkl3ZnVpQnJwNkpLaDVzR2JSUUlEQVFBQm8xTXdVVEFkQmdOVkhRNEVGZ1FVdW8rQ0ZYQUEyNTBFN1RzS1liTmsKZG55aUFZUXdId1lEVlIwakJCZ3dGb0FVdW8rQ0ZYQUEyNTBFN1RzS1liTmtkbnlpQVlRd0R3WURWUjBUQVFILwpCQVV3QXdFQi96QU5CZ2txaGtpRzl3MEJBUXNGQUFPQ0FRRUFXWDRJSVExUXlVdE9BWFdvaVRCeWt0YjIxL29hCmkwallNaDRnK0x4VmJJOGVkUVR1Q0x5RlRFQk9kcFlmN1cxVWprT1d2RjJBcnRTUGp4SlBEYVl0cDg1TWVnZjUKTmFiMUZMRXhWaTByVW5TOTNxd0pBMGpNeTBUSENDOWx6VW1VcGJweVg0SERhS3p3Wmg5RTF3aVBReVAzenBEcQpaSWRCZzE0cjF4OEhISFBVVC9JdXA2Nzc2Ym1VdExjZXFkb2h0MEMzbVlmQlBtUFNKdS90c3p4eUQvQ2doak1nCll0aDdwcDNJb0JVWVZRN3prakxmb01mRSt6R2VIR1RSRmZMMnhrS1pUU1l0YjdVQmdwUkJMdUxDV01nVG1OOUoKaEJXRnlGZW5ySDFERldoYnNlTndFRXExdjhNRHZGZng4T0VjS0xleHM4bUxTNll6WEJlNURGRlFyUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  sidecar.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUN1RENDQWFBQ0FRRXdEUVlKS29aSWh2Y05BUUVMQlFBd0l6RU1NQW9HQTFVRUN3d0RkMlZpTVJNd0VRWUQKVlFRRERBcHdjbWwyWVhSbFgyTmhNQjRYRFRJME1EVXhPVEExTXpVd01Wb1hEVE0wTURVeE56QTFNelV3TVZvdwpJVEVSTUE4R0ExVUVDd3dJYzJWamRYSnBkSGt4RERBS0JnTlZCQU1NQTJGd2FUQ0NBU0l3RFFZSktvWklodmNOCkFRRUJCUUFEZ2dFUEFEQ0NBUW9DZ2dFQkFKUzhHSTdKUm9uYUpXZGEyNTFoM09RcHpUVXR3UXlIMVVzaG1EOEgKdGx5TFlaQTRsMTI0RksrZ0N3bTcyV1ZVTzNrVGtVVkwzL3RaRm5tSndDTVVrRHRyT3kxalJTWHJuRlpnbHpBVwpuanZENXpFbU1PMWJBVUJOa3ZnUWNvUVNWODdlckVvSHFMV2tQdDFNbkFVRFJCZU5ac1NlS1NCWUZOZnhqT2dyCmFCdzQwT3J2cmhMUnNNREI5L3V3d29vM3RUempGeWJIK2JLREpsdmJwUDl2NkNJaTNNVHdIbml2Yy9qcFUxdWgKMmJtOGFvaU42U3MySlBrZWpCaTBBWWVOY2hQWWdTUUhXRHZma3lCRXFXVUdrcmtMcHRwK3FxazY0bkQ0SVppLwpWMTdkRTVScmFWejltdlVtUXNvaDh4YkRObXdZbWVZaTFzVmhhVytHdFN4c2FwTUNBd0VBQVRBTkJna3Foa2lHCjl3MEJBUXNGQUFPQ0FRRUFjM1VaeTBRM0dFeFJWcUtwQmQ2eGpBTitUd3FUeXJnbDZCb3NSS3Y2L1grcDZoVDYKMG13Z1JBNmpidEdaclcvSDFCaFVRUTNwT3dCajZhTnNlMDdMblA0dUlmNDVUTTUySExXMCsxUjgrTjZUbmFFTwpHWFcyY0hhRWRiNVcrVUFOSjhMRmlxL0FpeGE2RW9CT2R1bTVpWEhiK05Jcks2NCt5WE5pZ0RmY1ExU1RZUHMxCjRSb0d2MTdBUmgxWTR3dUdHczVvNEJDQjF3UllsTE5tNFpONW0wc2FRcmwxOG95cU1iVVB5SkY0Kzg4V0dPaUUKTGJyRThEMFNQa0J6cTdTL095OUt5aVp6eStpSE5wYzBqNW5JRkhXWGNmYmhjczFlR0dab3QvRTJhRlB6dkdFaQpkd3huYWIxZjZVemJGaDdHZlFRaGdYZ3ZFRVBqQ3RzRUxybHVLdz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+  sidecar.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ1V2QmlPeVVhSjJpVm4KV3R1ZFlkemtLYzAxTGNFTWg5VkxJWmcvQjdaY2kyR1FPSmRkdUJTdm9Bc0p1OWxsVkR0NUU1RkZTOS83V1JaNQppY0FqRkpBN2F6c3RZMFVsNjV4V1lKY3dGcDQ3dytjeEpqRHRXd0ZBVFpMNEVIS0VFbGZPM3F4S0I2aTFwRDdkClRKd0ZBMFFYaldiRW5pa2dXQlRYOFl6b0syZ2NPTkRxNzY0UzBiREF3ZmY3c01LS043VTg0eGNteC9teWd5WmIKMjZUL2IrZ2lJdHpFOEI1NHIzUDQ2Vk5ib2RtNXZHcUlqZWtyTmlUNUhvd1l0QUdIalhJVDJJRWtCMWc3MzVNZwpSS2xsQnBLNUM2YmFmcXFwT3VKdytDR1l2MWRlM1JPVWEybGMvWnIxSmtMS0lmTVd3elpzR0pubUl0YkZZV2x2CmhyVXNiR3FUQWdNQkFBRUNnZ0VBU0czaXZhSFpsbWJqZ1JYWFRhaHJBN2N4aGJ5T3ZwWGxNZzJka05BbUo2SCsKZEZlQ3FySnFiRzRSQWYvMjZXZmdBR0dkaERQalVvaTdMNXQ3cy9tZkZUaHVYSGR6cEhnOHJUbWpWbGtsWERCVgp4UEwycjVkNklBREcyY05VcU9rdjFuOU1RazdCZ3hjRlFBby9EaGZka0dTZEQ1Ri9zSThFTTNhZktpNTlLQVJxCnBaTEpSSmZBZHpvUVhydzQxVUxOaFU4R3hZUmtvQ3ZXZExBeXgyQzdoTk92ditYSE8zN1A2QWkrMCtYeU45NnAKdE9VZGVRT0FYdlNIcmZVcDlmenZBM0NSelc0c2p5YjV6bzZ3R21KMFdaTFRxTWN5TzZhenhlSDY3dnhRdndTMApaRDdMZldLV3JPSU1VMWJ6dThRdkJnMEJuQk1CTEJYTnRQVEx4MkpRT1FLQmdRRE8xWFBwK3FhS1lBbHhKYnlSCkFWSW41SE1yb3A5MDAvNjBHQ2RpcXJFLzErTjRpU0k1N0hKbFNLVnNaYkdDajRHZE5JdStaQWg5clEzMXFZOVQKUWVpRUFCYzZLWWVLK0JvSnBXNVBaREU2bEM0dW5YZ2FHR0VqYzZvU1oySldDdkRPNUt5Wm9LK05ad2VOUlAxTgpIK0tQVWhySkdlS0pHQ3lHMjlUQVc0NlcrUUtCZ1FDNEZ4M0p4VUpGYnRhYUwyQkdFdUpnblBDWlltczNVVWE2CmVpb1hGMFMyWHdXQUVEUWIzSVZKZ3N4dGxsWlM5SWJ6OG1hdVE2cks4K2JyVWpEeE1aSkwweDBWcWFuV2xVREkKWEEwVW5QK0grYitkdGF4VDJFVVk5UWxyNG4ranpxbkxvS0NpQ1RqR2pzU1ZKSG1DclNRbGtjNnZOUnhGNzJoYwpPbGNpd2RkMDZ3S0JnR0N2QU1jd0JxZUthdjk4SDJBOUdOVlRBYzgwN29yakNoM1BhS0hEbnFWMFduMmV4T1FFCnRoaklVNk9QQ2VJNUNPS2VqSEJNUEhmYTdEcVlyMG5BOWxxMTNDV3hBZzRoR2JMR3BRRHhtZDJESk85ZlpxUDAKSDN3OTloTXlScEpuL05jSnAvRU1YdU9mZExWQnVaSlN4RW93bkJyRFFkVEordzV6TmtsUXd4K3BBb0dCQUxEdApickM4aUd3SkVmSlFORHhFN0JPazRrelkzV2ptRVk4cDJJZ20wZUJoUlAwSEZiM3RYS0VCT0E3ZkhZcE8vK0UzCmlONVZwTEc0WnFpbWJ1bHhGa1VQMnZVMkFraDlYQ3owNDVGN0x0QjJCV2JDODZRRnlLc3EzbW8wM3k0RmN3V0YKRkwySEZXMG9TK0YzazkwM0lQV0d4Rmw2TnZrMEZsNEZxRGQ4aStJUEFvR0FIb3VkS3FHai9NZ2pMb3ByaXhZcQo4VkUvUUQ5UHl3NmVlTXd2UkQvaTBSMDlyMkdKZjFXQkV2NFZkaFVISlN0NDlSMm9SZjVpa1lyRng0bkNQeGdpClJMVXl0Z2l5eW01bXR1ZW90WUdOaUZhdDlDOUxLUTVmbzRScHNEOTBjOWQwTTZoMko4Y216clhYL0g3bCt1VUoKM3dVUXAyMnZTYktncnZIUEhVM21ua1U9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: apisix-config
+  namespace: skinnycert
+data:
+  apisix.yaml: |
+    # ApiSix Standalone Configuration file.
+    apisix:
+      ssl:
+        enable: true
+        fallback_sni: "gateway.svc.docker.local"
+    nginx_config:
+      error_log_level: info
+    ssls:
+      - #---------------------------------------------------------------------------------------------------------------
+        # API Six Certificate for Mutual TLS
+        # Certificate files are located in the `certificate/mtls/gateway` folder.
+        # Certificates can be generated using the `gen_mtls_certs.sh` script.
+        #---------------------------------------------------------------------------------------------------------------
+        id: mtls_cert
+        cert: |
+          -----BEGIN CERTIFICATE-----
+          MIICvDCCAaQCAQEwDQYJKoZIhvcNAQELBQAwIzEMMAoGA1UECwwDd2ViMRMwEQYD
+          VQQDDApwcml2YXRlX2NhMB4XDTI0MDUxOTA1MzUwMVoXDTM0MDUxNzA1MzUwMVow
+          JTERMA8GA1UECwwIc2VjdXJpdHkxEDAOBgNVBAMMB2dhdGV3YXkwggEiMA0GCSqG
+          SIb3DQEBAQUAA4IBDwAwggEKAoIBAQDAee5rXAm4kSCNQF+PFbnFQt8Ox2bvfhg5
+          lYYM/IzcnZMfZju/UKIsGwqa9Bd/F41qUfuJti5LmLGxp8kLIo/d70wgu2e9p45f
+          E2KF7OH4mYx7sko2gqQoBLEWkfPhnrK0LuPP5S+ZnVpJYjwgjW1Ahc4CevIyxaNc
+          v8uFJcQJkyUKNnZ1jhHm1yNoR4aROhetQ0s1NnlLzJAgDft8Qkg6dizi7ifUVsqz
+          5os+7tK+kjAcLLMJ0YzCn3VDq5ZeFGm6lEbhpkm0C6GTrDivkS+eOt8+a84GqSta
+          FQA7sDIO6W/keHocw0pltFmOW9X43rLxd3dG3sXQTq0TsqbOoJuzAgMBAAEwDQYJ
+          KoZIhvcNAQELBQADggEBADFi+tFYGUJkzW4rPHrw9Y/fGFiJXS7iat0xOv8nWGO1
+          f/I9vRMXelUuEIhd7ILmkjgF/x21P47GrXIFsV+SO2cdU+/yeaUEb68h6tS68Wzq
+          x6/Bq2iTrD6m7d1vUnk1PiZWKwvxsB0HP7YiLwAdKFhqBrVDS1cemYFq7NkBJvc8
+          Rb/z6kiZztNqob6KLtr/31y4Aa3LXVpRvLC776KplXezFrEb1JoBMbkwX5UTVBKN
+          Wx4jl0ejSF/lhqXRBd0h8IsNNpvF5aoXHHFvphwmJPWGju4Ykr7dddyeaspbmVQf
+          K5/v6VtZxxej0apAVTRKlc1hHTOtWRFl+EPtRYvTyBQ=
+          -----END CERTIFICATE-----
+        key: |
+          -----BEGIN PRIVATE KEY-----
+          MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDAee5rXAm4kSCN
+          QF+PFbnFQt8Ox2bvfhg5lYYM/IzcnZMfZju/UKIsGwqa9Bd/F41qUfuJti5LmLGx
+          p8kLIo/d70wgu2e9p45fE2KF7OH4mYx7sko2gqQoBLEWkfPhnrK0LuPP5S+ZnVpJ
+          YjwgjW1Ahc4CevIyxaNcv8uFJcQJkyUKNnZ1jhHm1yNoR4aROhetQ0s1NnlLzJAg
+          Dft8Qkg6dizi7ifUVsqz5os+7tK+kjAcLLMJ0YzCn3VDq5ZeFGm6lEbhpkm0C6GT
+          rDivkS+eOt8+a84GqStaFQA7sDIO6W/keHocw0pltFmOW9X43rLxd3dG3sXQTq0T
+          sqbOoJuzAgMBAAECggEAPQpuQj3+FzpvSFyR8Z7CO3zpoJY8Xtdud1SkHpo5Uf3n
+          Gp4hdJrt027//gRLL1MY1g8J5rKQHAlg0SaU66MaXRf23KqSS+NHk39iT3bAc0a+
+          9rukLYVg6hAS2UWQQo1Bv0LfnJ7iaaUtbPhqeShg7YWBv+edx9xF4rQwpxlDAoXK
+          3RtolrzIu/ixEGHGc3YwoikqOZb53FBdQqlkK4MDdu1uGU/wi/eT5edez1n9ebQv
+          zc26G7FPsynSh2LaHO+0U1aILnmAjHrPvRTZfoAsvnuHUhKHYJiUGEfLfmIOu1Vo
+          HhpmHyCK3TuAWI1J4i1BApeVhpJ/QN86lG3ZetgzAQKBgQDUuEThfTB8QDXsN7ol
+          QSYBJDS84O/VX4CWZoCWWSswMykW22zKfSRNDc0WoZ0WhCBf6UjyW1mMP0cg9Tng
+          478b0q39o/jZv1UXAtMfIMF0omydtKOgAUDsAkIWxa43uJIij0gO9rqD9ELde0/L
+          NZ7T8hlSNzE9Iutss3ny/svz+wKBgQDno0IdhDjvaLsRojq4v9x2aGs5wA+dLpXC
+          tCY9qWgaqkVWljYoYMD6OyVrROvjAaqml22bg/UBDJa7XJE47eUnPeMwJplZBYWE
+          KYY/WtyZTOYH0ytjlkH1CQttB9+GfU+S212xlX8YDzjByfYjAmwscyRNSYTdYL6N
+          lYZgJSSxqQKBgDtnkmTeTzIDxItJLMTGotRixg+RSaju2Lwnt/VExZjaULk/YexS
+          clbKaeHOFE57a4cdYO+9rw5JhZWgph81uuMMPOa+afp1QlAAy/C/dwcZbPfFwIQo
+          lXbTUp2FaxfIhZb9KIR1RrUe+6VakHgRa1+JFqUtIKUQIWrj3ESN/2sNAoGAa9qd
+          Z0bwh7DZIZ3K/8j96vg1rP8bhhFx0+WzxJRDj97mSCnK78QVNq4hfy/pMZrODaGG
+          fJnVk3Z8HKM+Tyadw0bSqNHgJw4mG+KFyqwQ+SRQGyadFlKZRXG/qzW2Q1XHnlab
+          6pr0QYyc3cae37A6E/xM09u+jKGGOEB9//hrfHkCgYB1DIid+56KD3oVpFZhLgbC
+          ifLIRd63AWSBqOzEMsV+pUdAIJ+OhHm/fXBbskK+XZVTWcjFD6o85R1LziDxVsY6
+          wqerHM51DdDgpaLT/GVY9ESEfVGn88JnhuTgw/kcf6hVxsv96wFfnbzcVoxjVp1u
+          XUsRd0RYEgWWSJ0ie0b2aA==
+          -----END PRIVATE KEY-----
+        
+        type: client
+      - #---------------------------------------------------------------------------------------------------------------
+        # SSL Certificate for API Six Client Communication
+        # This SSL certificate is used for communication between API Six and the client.
+        # It is a server certificate that corresponds to the SNI (Server Name Indication) specified in the configuration YAML file (see the `snis` element).
+        # Certificate files are located in the `certificates/tls/gateway` folder.
+        # Generate these certificates using the `gen_tls_cert.sh` script.
+        #---------------------------------------------------------------------------------------------------------------
+        id: ssl_server_certificate
+        cert: |
+          -----BEGIN CERTIFICATE-----
+          MIICrDCCAZQCFF7k+ZV99xoBsHLEpDPMq2hk7GauMA0GCSqGSIb3DQEBCwUAMBEx
+          DzANBgNVBAMMBlJPT1RDQTAgFw0yNDA2MDEwOTUwMjZaGA8yMTI0MDUwODA5NTAy
+          NlowEjEQMA4GA1UEAwwHZ2F0ZXdheTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+          AQoCggEBAN38nOLwsclAjK5Akm6nWZ98d8lnsr+7rpKV2JQszHSAXgFxG5qvkuI3
+          8hpdyNdPW+x7TNXHNRn5dR5JWj6g4k3FWB3SOF2a4aM1OcARWYNuWQpkCndVyncC
+          wuXWSQ+narJh9wYlaZn6QLFSoIPv5TzXk/TCz3pSb5C7nvaDI2S3xar1sMarPIcD
+          OMHoGs6Q+INZFrBkaCRk4/TQiyzDE8PybBn7r9VW5NyRdwb0xVN3WsVl8GSJPhr3
+          XyNSWcfxfJBpf7prZtAyKgn9AYIFF2nJOALtmX1eUspcq76pAp1J1h/+BvEaujDG
+          bzdW1Pq6ly+R2W4JJoeK23qfnkpACPECAwEAATANBgkqhkiG9w0BAQsFAAOCAQEA
+          Tcb56tzEV3335jZEJC2FeYbYrg/Arx5Iw6u2XSrFHla1hPnz647lhB4PWVLrYb5R
+          U9zTttorRNYtliO3o6YZ2YegP9ei/Jy/Q7ycCoDaAppTmB9jToxbzRqOaPaCK1xh
+          EXKDv8hcZSz/l0MjuvdzGWCDVNkzh6m7lBKGTn271ChJxpDE6ju4KqFRO5gKNLL1
+          HLSaxLdkMfFJIW7mp2AtUiKIARXRiTR01Ux9JklBA2pXbe6b5MdKxNXgSvPWl1LV
+          ygLe6UeQSSyrIBr/LVcJQ589im1syJna8ZBmG6deyNqnm+m28YEUqOkNO7XWQP4G
+          uVT1/rVZaJMlVlxNYr5mbw==
+          -----END CERTIFICATE-----
+        
+        key: |
+          -----BEGIN PRIVATE KEY-----
+          MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDd/Jzi8LHJQIyu
+          QJJup1mffHfJZ7K/u66SldiULMx0gF4BcRuar5LiN/IaXcjXT1vse0zVxzUZ+XUe
+          SVo+oOJNxVgd0jhdmuGjNTnAEVmDblkKZAp3Vcp3AsLl1kkPp2qyYfcGJWmZ+kCx
+          UqCD7+U815P0ws96Um+Qu572gyNkt8Wq9bDGqzyHAzjB6BrOkPiDWRawZGgkZOP0
+          0IsswxPD8mwZ+6/VVuTckXcG9MVTd1rFZfBkiT4a918jUlnH8XyQaX+6a2bQMioJ
+          /QGCBRdpyTgC7Zl9XlLKXKu+qQKdSdYf/gbxGrowxm83VtT6upcvkdluCSaHitt6
+          n55KQAjxAgMBAAECggEAAlUU0txYjIW0KrzLvtlaTeObswiQjmeDysxxOoCGtN/8
+          wde+Qak7qAau5hIQlkg7wJMgOm4/7BdozLi1SkAN3c235Kvfv2FcR5gWdWyZ9Aja
+          ay18Ttf2n8YE8VHL5orfGfBwI/O5en7ciNXBAvifZoEYMUV9CE9RPqINOMOz9y9/
+          ysVkTdqF2sWfDsM6cTj1lab2spgUckOQftEShWTIhmTOnCN8x4l66t1sryLXSajl
+          pfEyOE++fk0Xn/otucr4CsTHY/rw4MSkXg/lrJJkfbRYB5nahORWEacg5AYrtFzr
+          LUoHEXNxAyG0MxVrwbcY/7mg6Sc8hIkxdjfWjG4TqQKBgQDkxJmvKsme88sjDgn2
+          Us5sNB51YvtrsgqevlfBX8Zb1i/EJuwIrC2KzJC+VY1wJVm6PtTAIhJctsKlXMVe
+          szhNj7+gPErDtOyKEz+VW93F2DVq7ht663YNTVaNEQR8qiPHxUBHZ0eWdoA6VBua
+          dVPQbZUJxt7dMcujqm3RSImgywKBgQD4aV1KvfFjbSUyECUTk9Ny914XgufDzuWx
+          7bKJXgJM9qrFE3G55dBik3g0ubW2OALAqn1Mx9byYJvxaNG/KRYoOfFtVHKKGU1l
+          /DGIXLkGapXREUdPRMmkmiwnQVDh776THD9PG4FsZm6CKBPauXrq4urHYaUyEl8/
+          9qQOq8FxswKBgQDDS8MXcyOkeuPUDUwb6R0n6maGN/YDPn8qfbxU7PpdtEAa6E9g
+          J/zJHVID6u1P69Lp2HGvhGbAl5UbrlMgQUezjyA8HryEzpOQXFZPn5l4KNeRbaww
+          B4tEV92nl/uIoYbiKFZznovSu19EbEEUX00qBiLRseDYXIZINlqB67byeQKBgEsj
+          G5vS7iOjzN9isMRGL2wT1HsKFm5Ms39pJVqVe96psaegpQKUt75JWs+f6I2wTWzX
+          ZMUHoUV44VJY4TCQDeqm9Bact3R8CMQzTwwu96wwKxaswkQAy3klRPuurvdYG+3F
+          WoTkDfaq2Pw3gSHkfoBzmI4sQ9psYjEnuiHR49YvAoGAYgM2LphcJHfoQE/XglMi
+          f9GgLESx/0FqqHX5CHCkB7t28LKYSUicXy1sjzc6E50HeDQ1eKy5Fadhdjo9uPX9
+          Eobvgcj91LTnAEvcX31vAUabRGhCABblPyOHTvypsKBdEw0FDKySdxnPQzL6xx8Q
+          hMxcAmq4TQQRaSYvIdOiVkg=
+          -----END PRIVATE KEY-----
+        ssl_protocols:
+          - TLSv1.2
+          - TLSv1.3
+        snis:
+          - gateway.svc.docker.local
+    #-----------------------------------------------------------------------------------------------------------------------
+    # Global Rules Definition
+    # Applies to all consumers, routes, and upstream configurations.
+    # Ensures security by default.
+    # Removes the server header from responses.
+    # Adds a `nosniff` header for enhanced security.
+    #---------------------------------------------------------------------------------------------------------------
+    global_rules:
+      - id: 1
+        plugins:
+          response-rewrite:
+            headers:
+              set:
+                X-Content-Type-Options: nosniff
+                Content-Type: application/json
+              remove:
+                - Server
+    #---------------------------------------------------------------------------------------------------------------
+    # Consumer Definitions for the API
+    # Defines various consumers for the API.
+    # For brevity, BASIC HTTP authentication is used for these consumers.
+    #---------------------------------------------------------------------------------------------------------------
+    consumers:
+      - username: note
+        plugins:
+          basic-auth:
+            username: note
+            password: note
+      - username: health
+        plugins:
+          basic-auth:
+            username: health
+            password: health
+    #---------------------------------------------------------------------------------------------------------------
+    # Route Definitions
+    # Defines routes for the API.
+    # Maps ApiSix paths to corresponding service and upstream paths.
+    #---------------------------------------------------------------------------------------------------------------
+    routes:
+      - uri: /health
+        service_id: 1
+        plugins:
+          basic-auth: { }
+          consumer-restriction:
+            rejected_msg: "Only users with the health permissions can view this."
+            whitelist:
+              - health
+      - uri: /note
+        service_id: 1
+        plugins:
+          basic-auth: { }
+          consumer-restriction:
+            whitelist:
+              - note
+      - uri: /posts
+        methods:
+          - GET
+        #---------------------------------------------------------------------------------------------------------------
+        # Setup a mock endpoint
+        # This is an example that could be used when mocking out responses.
+        #---------------------------------------------------------------------------------------------------------------
+        plugins:
+          mocking:
+            delay: 1
+            content_type: "application/json",
+            response_status: 200
+            response_schema:
+              properties:
+                title:
+                  example: "A new post"
+                  type: string
+    #---------------------------------------------------------------------------------------------------------------
+    # Service Definition to Upstream (Rust API)
+    # Defines a service that connects to the upstream Rust API.
+    # Adds a request ID to each header for tracking purposes.
+    # Example: x_request_id:a70931f6-509f-443e-9e76-3ab02d08b0bd
+    #---------------------------------------------------------------------------------------------------------------
+    services:
+      - id: 1
+        upstream_id: 1
+        plugins:
+          request-id: { }
+    #---------------------------------------------------------------------------------------------------------------
+    # Upstream Definition for Rust API
+    # Specifies how to communicate with the Rust API.
+    # Uses the HTTPS scheme with mutual TLS (mTLS) by defining the `tls` element.
+    #---------------------------------------------------------------------------------------------------------------
+    upstreams:
+      - id: 1
+        nodes:
+          "api.svc.docker.local:8443": 1
+        type: roundrobin
+        scheme: https
+        pass_host: rewrite
+        upstream_host: api.svc.docker.local
+        tls:
+          client_cert_id: mtls_cert
+    #---------------------------------------------------------------------------------------------------------------
+    # plugins listed here will be hot reloaded and override the boot configuration
+    #---------------------------------------------------------------------------------------------------------------
+    plugins:
+      - name: request-id
+      - name: basic-auth
+      - name: consumer-restriction
+      - name: mocking
+      - name: response-rewrite
+      - name: file-logger
+    
+    
+    #END
+
+
+
+
+---
+# -------------------------------
+# REST API Deployment + Service
+# -------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skinnycert-api
+  namespace: skinnycert
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: skinnycert-api
+  template:
+    metadata:
+      labels:
+        app: skinnycert-api
+    spec:
+      containers:
+        - name: skinnycert
+          image: namphibian/skinnycert:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+            - containerPort: 80
+          env:
+            - name: RUST_LOG
+              value: "info"
+            - name: SERVER_PORT
+              value: "80"
+            - name: SERVER_ADDRESS
+              value: "0.0.0.0"
+            - name: WORKER_THREADS
+              value: "6"
+#        - name: sidecar
+#          image: nginx:stable-alpine3.21-slim
+#          ports:
+#            - containerPort: 8443
+#          volumeMounts:
+#            - name: nginx-config
+#              mountPath: /etc/nginx/nginx.conf
+#              subPath: nginx.conf
+#              readOnly: true
+#            - name: certs
+#              mountPath: /etc/nginx/conf.d
+#              readOnly: true
+#      volumes:
+#        - name: nginx-config
+#          configMap:
+#            name: nginx-config
+#        - name: certs
+#          secret:
+#            secretName: sidecar-certs
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: skinnycert-api
+  namespace: skinnycert
+spec:
+  selector:
+    app: skinnycert-api
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+    - name: https
+      port: 8443
+      targetPort: 8443
+    - name: alt-http
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: skinnycert-ingress
+  namespace: skinnycert
+spec:
+  rules:
+    - host: skinnycert.dev.minikube
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: skinnycert-api
+                port:
+                  number: 80
+---
+# -------------------------------
+# Gateway (APISIX)
+# -------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skinnycert-gateway
+  namespace: skinnycert
+spec:
+  replicas: 0
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: skinnycert-gateway
+  template:
+    metadata:
+      labels:
+        app: skinnycert-gateway
+    spec:
+      containers:
+        - name: gateway
+          image: apache/apisix:3.9.0-debian
+          ports:
+            - containerPort: 9443
+          env:
+            - name: APISIX_STAND_ALONE
+              value: "true"
+          volumeMounts:
+            - name: apisix-config
+              mountPath: /usr/local/apisix/conf/apisix.yaml
+              subPath: apisix.yaml
+              readOnly: true
+      volumes:
+        - name: apisix-config
+          configMap:
+            name: apisix-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: skinnycert-gateway
+  namespace: skinnycert
+spec:
+  selector:
+    app: skinnycert-gateway
+  ports:
+    - name: https
+      port: 9443
+      targetPort: 9443
+  type: LoadBalancer
+
+---
+# -------------------------------
+# Benchmark (Taurus)
+# -------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skinnycert-benchmark
+  namespace: skinnycert
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: skinnycert-benchmark
+  template:
+    metadata:
+      labels:
+        app: skinnycert-benchmark
+    spec:
+      containers:
+        - name: taurus
+          image: blazemeter/taurus
+          tty: true
+          stdin: true
+          command: [ "/bin/sh" ]
+          volumeMounts:
+            - name: taurus-configs
+              mountPath: /bzt-configs
+              readOnly: true
+            - name: taurus-artifacts
+              mountPath: /tmp/artifacts
+      volumes:
+        - name: taurus-configs
+          hostPath:
+            path: ./benchmarks/configs
+        - name: taurus-artifacts
+          hostPath:
+            path: ./benchmarks/artifacts
+

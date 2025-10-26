@@ -1,0 +1,67 @@
+# Optional: Enable unstable cargo features
+# cargo-features = ["profile-rustflags"]
+
+[package]
+name = "skinnycert"
+version = "0.1.0"
+edition = "2024"
+authors = ["Your Name <you@example.com>"]
+description = "Industrial-strength TLS certificate API built in Rust"
+license = "MIT"
+repository = "https://github.com/yourusername/skinnycert"
+keywords = ["tls", "certificates", "actix-web", "rust", "industrial"]
+categories = ["network-programming", "web-programming", "cryptography"]
+
+[[bin]]
+name = "skinnycert"
+path = "src/bin/skinnycert.rs"
+
+[lib]
+path = "src/lib/lib.rs"
+
+[dependencies]
+actix-web = "4.11.0"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+dotenvy = "0.15.7"
+serde = { version = "1.0.228", features = ["derive","serde_derive"] }
+tracing = { version = "0.1.41", features = ["log"] }
+tracing-subscriber = { version = "0.3.20", features = ["registry", "env-filter"] }
+tracing-bunyan-formatter = "0.3.10"
+tracing-actix-web = "0.7.19"
+clap = { version = "4.5.48", features = ["derive"] }
+chrono = { version = "0.4.31", features = ["serde"] }
+openssl = "0.10.74"
+x509-parser = "0.15"
+pem = "1.0"
+
+# Optional: Uncomment if you plan to use SQLx for database storage
+# sqlx = { version = "0.8.6", features = ["mysql", "runtime-async-std", "macros", "chrono", "bigdecimal"] }
+# sqlx-cli = "0.8.6"
+
+# Optional: Uncomment if you need time/date handling
+# chrono = { version = "0.4.22", features = ["serde"] }
+
+# Optional: Uncomment if you need UUID generation
+# uuid = { version = "1.8.1", features = ["v4"] }
+
+# Optional: Uncomment if you want to use actix-rt directly
+# actix-rt = "2.11.0"
+
+# Optional: Uncomment if you want tracing integration with log crate
+# tracing-log = "0.2.0"
+
+[dev-dependencies]
+reqwest = "0.12.23"
+
+[profile.release]
+opt-level = 'z' # Optimize for size
+lto = true
+codegen-units = 1
+
+# Optional: Target-specific flags for advanced builds
+# [target.x86_64-unknown-linux-gnu]
+# rustflags = ["-C", "linker=clang", "-C", "link-arg=-fuse-ld=lld"]
+
+# Optional: Release-specific flags
+# [profile.release]
+# rustflags = ["-C", "linker=clang", "-C", "link-arg=-fuse-ld=lld"]
