@@ -1,4 +1,6 @@
-use skinnycert::server::configuration::{ServerListeningAddress, ServerPort, configure_environment};
+use skinnycert::server::configuration::{
+    ServerListeningAddress, ServerPort, configure_environment,
+};
 use std::net::{IpAddr, Ipv4Addr};
 
 /// Integration-style unit test for the `/health` endpoint.
@@ -112,7 +114,8 @@ fn spawn_app() -> String {
     };
 
     // Launch the Actix system server asynchronously.
-    let server = skinnycert::server::system::run(config.listener, config.worker_threads).expect("Failed to bind address");
+    let server = skinnycert::server::system::run(config.listener, config.worker_threads)
+        .expect("Failed to bind address");
 
     // Spawn the server in the background (so test execution can continue).
     let _ = tokio::spawn(server);

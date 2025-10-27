@@ -29,6 +29,7 @@ use crate::server::routes::handlers::models::health_check::{HealthCheckResponse,
 /// Panics if `/proc/meminfo` or `/proc/self/status` cannot be read.
 /// This behavior is fine for internal health checks but can be
 /// changed to return HTTP 500 if desired.
+#[tracing::instrument(name = "Healthcheck GET Request.")]
 pub async fn get_handler() -> impl Responder {
     // --- Free system memory ---
     let free_memory_kb = get_free_memory();
@@ -55,6 +56,7 @@ pub async fn get_handler() -> impl Responder {
 ///
 /// # Returns
 /// - [`HttpResponse::MethodNotAllowed`]
+#[tracing::instrument(name = "Healthcheck POST Request.")]
 pub async fn post_handler() -> impl Responder {
     HttpResponse::MethodNotAllowed()
 }
@@ -66,6 +68,7 @@ pub async fn post_handler() -> impl Responder {
 ///
 /// # Panics
 /// Panics if `/proc/meminfo` cannot be read or parsed.
+#[tracing::instrument(name = "Get Free Memory.")]
 fn get_free_memory() -> u64 {
     let mem_info = fs::read_to_string("/proc/meminfo")
         .expect("Failed to read /proc/meminfo");
@@ -86,6 +89,7 @@ fn get_free_memory() -> u64 {
 ///
 /// # Panics
 /// Panics if `/proc/self/status` cannot be read or parsed.
+#[tracing::instrument(name = "Get Process Memory.")]
 fn get_process_memory() -> u64 {
     let status = fs::read_to_string("/proc/self/status")
         .expect("Failed to read /proc/self/status");
