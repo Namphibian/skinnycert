@@ -19,8 +19,10 @@ services:
         source: ./database/init_db.sql
         target: /docker-entrypoint-initdb.d/init_db.sql
         read_only: true
-      # Persistent data volume
-      - postgres_data:/var/lib/postgresql/data
+      # Persistent data volume (named volume managed by Docker)
+      - type: volume
+        source: postgres_data
+        target: /var/lib/postgresql/data
     ports:
       - "5432:5432"
     networks:
