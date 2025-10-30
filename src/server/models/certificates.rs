@@ -6,11 +6,13 @@ use uuid::Uuid;
 use openssl::pkey::PKey;
 use pem::parse;
 use std::error::Error;
+use sqlx::Type;
 use x509_parser::prelude::{ASN1Time, FromDer, X509Certificate};
 
 /// Supported key algorithm types
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Type)]
 #[serde(rename_all = "UPPERCASE")]
+#[sqlx(type_name = "key_algorithm", rename_all = "UPPERCASE")]
 pub enum KeyAlgorithm {
     RSA,
     ECDSA,

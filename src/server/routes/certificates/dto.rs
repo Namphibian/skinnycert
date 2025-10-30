@@ -50,8 +50,9 @@ pub struct PatchCertificateDto {
 /// Convert DbCertificateWithSans to CertificateResponseDto
 impl From<DbCertificateWithSans> for CertificateResponseDto {
     fn from(db_cert: DbCertificateWithSans) -> Self {
-        let key_strength = match db_cert.key_algorithm.as_str() {
-            "RSA" => {
+        let key_strength = match db_cert.key_algorithm {
+
+            key_algorithm @ KeyAlgorithm::RSA => {
                 let size = match db_cert.rsa_key_size.as_deref() {
                     Some("2048") => RsaKeySize::Bits2048,
                     Some("3072") => RsaKeySize::Bits3072,
@@ -60,7 +61,7 @@ impl From<DbCertificateWithSans> for CertificateResponseDto {
                 };
                 KeyStrength::Rsa(size)
             }
-            "ECDSA" => {
+           key_algorithm @ KeyAlgorithm::ECDSA => {
                 let curve = match db_cert.ecdsa_curve.as_deref() {
                     Some("P256") => EcdsaCurve::P256,
                     Some("P384") => EcdsaCurve::P384,
@@ -72,9 +73,9 @@ impl From<DbCertificateWithSans> for CertificateResponseDto {
             _ => KeyStrength::Rsa(RsaKeySize::Bits2048), // fallback
         };
 
-        let key_algorithm = match db_cert.key_algorithm.as_str() {
-            "RSA" => KeyAlgorithm::RSA,
-            "ECDSA" => KeyAlgorithm::ECDSA,
+        let key_algorithm = match db_cert.key_algorithm {
+            KeyAlgorithm::RSA => KeyAlgorithm::RSA,
+            KeyAlgorithm::ECDSA => KeyAlgorithm::ECDSA,
             _ => KeyAlgorithm::RSA, // fallback
         };
 

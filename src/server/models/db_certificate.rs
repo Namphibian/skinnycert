@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use uuid::Uuid;
+use crate::server::models::certificates::KeyAlgorithm;
 
 /// Database model for the certificates table
 #[derive(Debug, FromRow)]
@@ -48,7 +49,7 @@ pub struct DbCertificateWithSans {
     pub key_pem: String,
     pub public_key_pem: String,
     pub chain_pem: Option<String>,
-    pub key_algorithm: String,
+    pub key_algorithm: KeyAlgorithm,
     pub rsa_key_size: Option<String>,
     pub ecdsa_curve: Option<String>,
     pub organization: Option<String>,
