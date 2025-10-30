@@ -76,13 +76,14 @@ fn bind_listener(addr_str: &str, port: u16) -> Result<TcpListener, std::io::Erro
     ))
 }
 
-/// Configure Skinnycert environment, optionally using provided address and port.
+/// Configure Skinnycert environment, optionally using the provided address and port.
 /// If parameters are Empty, falls back to `.env` values or defaults.
 
 
 pub fn configure_environment(
     server_listening_address: ServerListeningAddress,
     server_port: ServerPort,
+    worker_threads_override: Option<u16>,
 ) -> Result<ServerRunTimeConfig, Box<dyn std::error::Error>>
 {
     // --- Load environment variables if available ---
@@ -125,11 +126,20 @@ pub fn configure_environment(
     let num_cpus = available_parallelism().unwrap().get().to_string();
     tracing::info!("Detected :{} CPU cores", num_cpus);
     // --- Worker thread count ---
-    let worker_threads: u16 = std::env::var("WORKER_THREADS")
-        .ok()
-        .and_then(|s| s.parse::<u16>().ok())
-        .unwrap_or(num_cpus.parse::<u16>().unwrap_or(4));
-    tracing::info!("Using worker threads: {}", worker_threads);
+    let worker_threads: u16 = match worker_threads_override {
+        Some(threads) => {
+            tracing::info!("Using worker threads from override: {}", threads);
+            threads
+        }
+        None => {
+            let threads = std::env::var("WORKER_THREADS")
+                .ok()
+                .and_then(|s| s.parse::<u16>().ok())
+                .unwrap_or(num_cpus.parse::<u16>().unwrap_or(4));
+            tracing::info!("Using worker threads: {}", threads);
+            threads
+        }
+    };
     // --- Bind the listener (IPv6 first, fallback to IPv4) ---
     let listener = bind_listener(&resolved_address.to_string(), resolved_port)
         .map_err(|e| format!("Failed to bind listener: {}", e))?;

@@ -24,6 +24,7 @@ pub fn spawn_app() -> String {
     let config = match configure_environment(
         ServerListeningAddress::Is(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
         ServerPort::Is(0), // 0 tells the OS to assign a random free port
+        8.into(),
     ) {
         Ok(cfg) => cfg,
         Err(e) => {

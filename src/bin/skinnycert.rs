@@ -18,6 +18,8 @@ struct Cli {
     workers: Option<u16>,
 }
 
+
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse CLI arguments
@@ -33,24 +35,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         None => ServerPort::Empty,
     };
 
-    // Configure environment
-    let mut config = match configure_environment(server_address, server_port) {
+    // Validate worker threads if provided
+    if let Some(workers) = cli.workers {
+        if workers == 0 {
+            eprintln!("Worker threads must be > 0");
+            std::process::exit(1);
+        }
+    }
+
+    // Configure environment with all parameters
+    let config = match configure_environment(server_address, server_port, cli.workers) {
         Ok(cfg) => cfg,
         Err(e) => {
             eprintln!("Configuration error: {}", e);
             std::process::exit(1);
         }
     };
-
-    // Override worker threads if provided
-    if let Some(workers) = cli.workers {
-        if workers == 0 {
-            eprintln!("Worker threads must be > 0");
-            std::process::exit(1);
-        }
-        config.worker_threads = workers;
-        tracing::info!("Worker threads overridden via CLI: {}", workers);
-    }
 
     // Run the server using the pre-bound listener
     run(config.listener, config.worker_threads)?.await?;
