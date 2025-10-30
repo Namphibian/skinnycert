@@ -1,5 +1,9 @@
+pub mod handler;
+
 use actix_web::web;
-use crate::server::routes::handlers::certificates::{get_handler, patch_handler, post_handler, put_handler, delete_handler};
+use handler::{delete_handler, get_handler, patch_handler, post_handler, put_handler};
+
+
 
 const PATH: &'static str = "/certificates";
 

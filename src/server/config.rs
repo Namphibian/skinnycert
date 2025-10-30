@@ -1,4 +1,5 @@
 use dotenvy::dotenv;
+use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::fmt;
 use std::io::Stdout;
 use std::net::{IpAddr, Ipv4Addr, TcpListener};
@@ -9,6 +10,7 @@ use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
 
 use crate::server::logger::configure_bunyan_logger_format;
 const DEFAULT_PORT: u16 = 8080;
+const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;
 
 #[derive(Debug)]
 pub enum ServerPort {
@@ -55,6 +57,33 @@ pub struct ServerRunTimeConfig {
     pub log_level: EnvFilter,
     pub worker_threads: u16,
     pub listener: TcpListener,
+    pub db_pool: PgPool,  // Add database pool
+}
+
+/// Configure database connection pool
+fn configure_database() -> Result<PgPool, Box<dyn std::error::Error>> {
+    let database_url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set in environment");
+
+    let max_connections = std::env::var("DB_MAX_CONNECTIONS")
+        .ok()
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(DEFAULT_DB_MAX_CONNECTIONS);
+
+    tracing::info!("Configuring database pool with max {} connections", max_connections);
+
+    let pool = tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current().block_on(async {
+            PgPoolOptions::new()
+                .max_connections(max_connections)
+                .connect(&database_url)
+                .await
+        })
+    })?;
+
+    tracing::info!("Database connection pool established");
+
+    Ok(pool)
 }
 
 /// Try to bind a listener to the supplied address **first as IPv6**, then IPv4.
@@ -78,8 +107,6 @@ fn bind_listener(addr_str: &str, port: u16) -> Result<TcpListener, std::io::Erro
 
 /// Configure Skinnycert environment, optionally using the provided address and port.
 /// If parameters are Empty, falls back to `.env` values or defaults.
-
-
 pub fn configure_environment(
     server_listening_address: ServerListeningAddress,
     server_port: ServerPort,
@@ -104,7 +131,7 @@ pub fn configure_environment(
 
     // --- Resolve server port ---
     let mut resolved_port: u16 = match server_port {
-        ServerPort::Is(p) => p, // Accept 0 as valid for ephemeral port
+        ServerPort::Is(p) => p,
         ServerPort::Empty => std::env::var("SERVER_PORT")
             .ok()
             .and_then(|s| s.parse::<u16>().ok())
@@ -112,7 +139,6 @@ pub fn configure_environment(
     };
 
     tracing::info!("Configuring server port: {}", resolved_port);
-
 
     // --- Resolve server address ---
     let resolved_address: IpAddr = match server_listening_address {
@@ -123,8 +149,10 @@ pub fn configure_environment(
             .unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)),
     };
     tracing::info!("Configuring server address: {}", resolved_address);
+    
     let num_cpus = available_parallelism().unwrap().get().to_string();
-    tracing::info!("Detected :{} CPU cores", num_cpus);
+    tracing::info!("Detected {} CPU cores", num_cpus);
+    
     // --- Worker thread count ---
     let worker_threads: u16 = match worker_threads_override {
         Some(threads) => {
@@ -140,26 +168,32 @@ pub fn configure_environment(
             threads
         }
     };
+
+    // --- Configure database connection ---
+    let db_pool = configure_database()?;
+
     // --- Bind the listener (IPv6 first, fallback to IPv4) ---
     let listener = bind_listener(&resolved_address.to_string(), resolved_port)
         .map_err(|e| format!("Failed to bind listener: {}", e))?;
-
 
     let local_addr = listener.local_addr().expect("Cannot get local address");
     if local_addr.port() != resolved_port {
         resolved_port = local_addr.port();
     }
+    
     tracing::info!(
         "Skinnycert server configured at {}:{} ({} threads).",
         resolved_address,
         resolved_port,
         worker_threads
     );
+    
     Ok(ServerRunTimeConfig {
         server_port: ServerPort::Is(resolved_port),
         server_address: ServerListeningAddress::Is(resolved_address),
         log_level,
         worker_threads,
         listener,
+        db_pool,
     })
 }

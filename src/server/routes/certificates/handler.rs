@@ -1,4 +1,4 @@
-use crate::server::routes::handlers::models::certificate::{
+use crate::server::models::certificates::{
     CertificateGenerationRequest, CertificateSubject, KeyAlgorithm, KeyStrength, RsaKeySize,
     TlsCertificate,
 };

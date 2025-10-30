@@ -1,5 +1,9 @@
+mod handler;
+mod model;
+
 use actix_web::web;
-use crate::server::routes::handlers::health_check::{get_handler, post_handler};
+use handler::{get_handler, post_handler};
+
 
 /// The base path for the health check endpoint.
 ///

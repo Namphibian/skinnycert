@@ -1,9 +1,6 @@
 use openssl::pkey::PKey;
 use openssl::x509::X509Req;
-use skinnycert::server::routes::handlers::models::certificate::{
-    CertificateGenerationRequest, CertificateSubject, EcdsaCurve, KeyAlgorithm, KeyStrength,
-    RsaKeySize, extract_public_key_from_private_key, validate_key_pair,
-};
+use skinnycert::server::models::certificates::{extract_public_key_from_private_key, validate_key_pair, CertificateGenerationRequest, CertificateSubject, EcdsaCurve, KeyAlgorithm, KeyStrength, RsaKeySize};
 
 fn create_test_subject() -> CertificateSubject {
     CertificateSubject {
