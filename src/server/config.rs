@@ -7,7 +7,7 @@ use std::thread::available_parallelism;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
-
+use tracing::dispatcher;
 use crate::server::logger::configure_bunyan_logger_format;
 const DEFAULT_PORT: u16 = 8080;
 const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;
@@ -57,29 +57,29 @@ pub struct ServerRunTimeConfig {
     pub log_level: EnvFilter,
     pub worker_threads: u16,
     pub listener: TcpListener,
-    pub db_pool: PgPool,  // Add database pool
+    pub db_pool: PgPool, // Add database pool
 }
 
 /// Configure database connection pool
-fn configure_database() -> Result<PgPool, Box<dyn std::error::Error>> {
-    let database_url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set in environment");
+async fn configure_database() -> Result<PgPool, Box<dyn std::error::Error>> {
+    let database_url =
+        std::env::var("DATABASE_URL").expect("DATABASE_URL must be set in environment");
 
     let max_connections = std::env::var("DB_MAX_CONNECTIONS")
         .ok()
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(DEFAULT_DB_MAX_CONNECTIONS);
 
-    tracing::info!("Configuring database pool with max {} connections", max_connections);
+    tracing::info!(
+        "Configuring database pool with max {} connections",
+        max_connections
+    );
 
-    let pool = tokio::task::block_in_place(|| {
-        tokio::runtime::Handle::current().block_on(async {
-            PgPoolOptions::new()
-                .max_connections(max_connections)
-                .connect(&database_url)
-                .await
-        })
-    })?;
+    let pool = PgPoolOptions::new()
+        .max_connections(max_connections)
+        .connect(&database_url)
+        .await
+        .expect("Failed to connect to database");
 
     tracing::info!("Database connection pool established");
 
@@ -107,26 +107,28 @@ fn bind_listener(addr_str: &str, port: u16) -> Result<TcpListener, std::io::Erro
 
 /// Configure Skinnycert environment, optionally using the provided address and port.
 /// If parameters are Empty, falls back to `.env` values or defaults.
-pub fn configure_environment(
+pub async fn configure_environment(
     server_listening_address: ServerListeningAddress,
     server_port: ServerPort,
     worker_threads_override: Option<u16>,
-) -> Result<ServerRunTimeConfig, Box<dyn std::error::Error>>
-{
+) -> Result<ServerRunTimeConfig, Box<dyn std::error::Error>> {
     // --- Load environment variables if available ---
     let _ = dotenv();
 
     // --- Configure logging ---
-    let log_level: EnvFilter =
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+
+
+    let log_level = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let formatting_layer: BunyanFormattingLayer<fn() -> Stdout> = configure_bunyan_logger_format();
+    if !dispatcher::has_been_set() {
+        let subscriber = Registry::default()
+            .with(log_level.clone())
+            .with(JsonStorageLayer)
+            .with(formatting_layer);
 
-    let subscriber = Registry::default()
-        .with(log_level.clone())
-        .with(JsonStorageLayer)
-        .with(formatting_layer);
+        set_global_default(subscriber).expect("Failed to set tracing subscriber");
+    }
 
-    set_global_default(subscriber).expect("Failed to set tracing subscriber");
     tracing::info!("Logger initialised; reading configuration from environment.");
 
     // --- Resolve server port ---
@@ -149,10 +151,10 @@ pub fn configure_environment(
             .unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST)),
     };
     tracing::info!("Configuring server address: {}", resolved_address);
-    
+
     let num_cpus = available_parallelism().unwrap().get().to_string();
     tracing::info!("Detected {} CPU cores", num_cpus);
-    
+
     // --- Worker thread count ---
     let worker_threads: u16 = match worker_threads_override {
         Some(threads) => {
@@ -170,7 +172,7 @@ pub fn configure_environment(
     };
 
     // --- Configure database connection ---
-    let db_pool = configure_database()?;
+    let db_pool = configure_database().await?;
 
     // --- Bind the listener (IPv6 first, fallback to IPv4) ---
     let listener = bind_listener(&resolved_address.to_string(), resolved_port)
@@ -180,14 +182,14 @@ pub fn configure_environment(
     if local_addr.port() != resolved_port {
         resolved_port = local_addr.port();
     }
-    
+
     tracing::info!(
         "Skinnycert server configured at {}:{} ({} threads).",
         resolved_address,
         resolved_port,
         worker_threads
     );
-    
+
     Ok(ServerRunTimeConfig {
         server_port: ServerPort::Is(resolved_port),
         server_address: ServerListeningAddress::Is(resolved_address),

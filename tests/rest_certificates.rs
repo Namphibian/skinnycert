@@ -5,7 +5,7 @@ use common::spawn_app;
 async fn get_certificates_test() {
     // --- Arrange ---
     // Start an ephemeral instance of the server and retrieve its base URL.
-    let address = spawn_app();
+    let address = spawn_app().await;
     println!("Test server listening on {}", address);
 
     // Initialize an asynchronous HTTP client.

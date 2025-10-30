@@ -1,3 +1,4 @@
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -76,6 +77,17 @@ pub enum KeyStrength {
     Ecdsa(EcdsaCurve),
 }
 
+/// Represents the subject details of a TLS certificate (X.509 Distinguished Name)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CertificateSubject {
+    pub organization: Option<String>,
+    pub organizational_unit: Option<String>,
+    pub country: Option<String>,
+    pub state_or_province: Option<String>,
+    pub locality: Option<String>,
+    pub email: Option<String>,
+}
+
 /// Certificate generation request parameters
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CertificateGenerationRequest {
@@ -129,7 +141,7 @@ impl CertificateGenerationRequest {
         use openssl::pkey::PKey;
         use openssl::x509::{X509Name, X509Req};
         use openssl::hash::MessageDigest;
-        
+
         let pkey = match (&self.key_algorithm, &self.key_strength) {
             (KeyAlgorithm::RSA, KeyStrength::Rsa(rsa_size)) => {
                 let rsa = Rsa::generate(rsa_size.as_bits())?;
@@ -155,12 +167,12 @@ impl CertificateGenerationRequest {
 
         // Build X509 Name (subject)
         let mut name_builder = X509Name::builder()?;
-        
+
         // Use first SAN as Common Name for legacy compatibility
         if let Some(cn) = self.sans.first() {
             name_builder.append_entry_by_text("CN", cn)?;
         }
-        
+
         if let Some(ref org) = self.subject.organization {
             name_builder.append_entry_by_text("O", org)?;
         }
@@ -179,7 +191,7 @@ impl CertificateGenerationRequest {
         if let Some(ref email) = self.subject.email {
             name_builder.append_entry_by_text("emailAddress", email)?;
         }
-        
+
         let name = name_builder.build();
 
         // Create CSR
@@ -191,7 +203,7 @@ impl CertificateGenerationRequest {
         if !self.sans.is_empty() {
             use openssl::x509::extension::SubjectAlternativeName;
             let mut san_builder = SubjectAlternativeName::new();
-            
+
             for san in &self.sans {
                 // Determine if it's an IP or DNS name
                 if san.parse::<std::net::IpAddr>().is_ok() {
@@ -200,7 +212,7 @@ impl CertificateGenerationRequest {
                     san_builder.dns(san);
                 }
             }
-            
+
             let san_extension = san_builder.build(&req_builder.x509v3_context(None))?;
             let mut stack = openssl::stack::Stack::new()?;
             stack.push(san_extension)?;
@@ -217,130 +229,10 @@ impl CertificateGenerationRequest {
         Ok((private_key_pem, csr_pem, public_key_pem))
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PatchCertificateRequest {
-    /// PEM-encoded signed certificate from CA
-    pub cert_pem: String,
-    
-    /// Optional PEM-encoded certificate chain
-    pub chain_pem: Option<String>,
-}
 
-/// Represents the subject details of a TLS certificate (X.509 Distinguished Name)
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CertificateSubject {
-    pub organization: Option<String>,
-    pub organizational_unit: Option<String>,
-    pub country: Option<String>,
-    pub state_or_province: Option<String>,
-    pub locality: Option<String>,
-    pub email: Option<String>,
-}
-
-/// Represents a TLS certificate and its metadata
-/// Used as the response for all certificate operations
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TlsCertificate {
-    /// Unique identifier
-    pub id: Uuid,
-    
-    /// PEM-encoded Certificate Signing Request (CSR)
-    pub csr_pem: String,
-
-    /// PEM-encoded private key
-    pub private_key_pem: String,
-
-    /// PEM-encoded public key (extracted from private key)
-    pub public_key_pem: String,
-
-    /// PEM-encoded certificate (None until patched with signed cert)
-    pub cert_pem: Option<String>,
-
-    /// Optional PEM-encoded certificate chain
-    pub chain_pem: Option<String>,
-
-    /// Key algorithm used (RSA or ECDSA)
-    pub key_algorithm: KeyAlgorithm,
-
-    /// Key strength used for generation
-    pub key_strength: KeyStrength,
-
-    /// Subject details
-    pub subject: CertificateSubject,
-
-    /// Subject Alternative Names (SANs)
-    pub sans: Vec<String>,
-
-    /// SHA-256 fingerprint (None until cert is patched)
-    pub fingerprint: Option<String>,
-
-    /// Certificate validity start time (Not Before)
-    /// Only available after certificate is patched
-    pub valid_from: Option<DateTime<Utc>>,
-
-    /// Certificate expiration time (Not After)
-    /// Only available after certificate is patched
-    pub expires_at: Option<DateTime<Utc>>,
-
-    /// When the CSR was created
-    pub created_at: DateTime<Utc>,
-
-    /// When the signed certificate was patched (ONE-TIME operation)
-    pub cert_uploaded_at: Option<DateTime<Utc>>,
-}
-
-/// Trait to derive the Common Name (CN) from the first SAN entry
-pub trait HasCommonName {
-    fn common_name(&self) -> Option<&str>;
-}
-
-impl HasCommonName for TlsCertificate {
-    fn common_name(&self) -> Option<&str> {
-        self.sans.first().map(|s| s.as_str())
-    }
-}
-
-/// Trait to extract a validity period from a signed certificate using x509-parser
-pub trait CertificateValidity {
-    fn extract_validity(&self) -> Result<(DateTime<Utc>, DateTime<Utc>), Box<dyn Error>>;
-}
-
-impl CertificateValidity for TlsCertificate {
-    fn extract_validity(&self) -> Result<(DateTime<Utc>, DateTime<Utc>), Box<dyn Error>> {
-        // Handle the Option properly - return error if cert_pem is None
-        let cert_pem_str = self
-            .cert_pem
-            .as_ref()
-            .ok_or("Certificate PEM is not available")?;
-
-        let pem = parse(cert_pem_str.as_bytes())?;
-
-        // Use the tag() method to get the tag string
-        if pem.tag() != "CERTIFICATE" {
-            return Err("Not a certificate PEM block".into());
-        }
-
-        // Use contents() method to get the DER bytes
-        let (_, cert) = X509Certificate::from_der(pem.contents())?;
-
-        // Access not_before and not_after as fields, not methods
-        let not_before = asn1time_to_datetime(&cert.validity().not_before)?;
-        let not_after = asn1time_to_datetime(&cert.validity().not_after)?;
-
-        Ok((not_before, not_after))
-    }
-}
-
-/// Trait to extract the public key from a private key PEM
-pub trait PublicKeyExtractor {
-    fn extract_public_key_pem(&self) -> Result<String, Box<dyn Error>>;
-}
-
-impl PublicKeyExtractor for TlsCertificate {
-    fn extract_public_key_pem(&self) -> Result<String, Box<dyn Error>> {
-        extract_public_key_from_private_key(&self.private_key_pem)
-    }
-}
+// ============================================================================
+// Utility Functions
+// ============================================================================
 
 /// Extracts the public key in PEM format from a private key PEM string
 /// Supports both RSA and ECDSA keys
@@ -374,7 +266,23 @@ pub fn validate_key_pair(
 }
 
 /// Converts ASN1Time to chrono DateTime<Utc>
-fn asn1time_to_datetime(time: &ASN1Time) -> Result<DateTime<Utc>, Box<dyn Error>> {
+pub fn asn1time_to_datetime(time: &ASN1Time) -> Result<DateTime<Utc>, Box<dyn Error>> {
     let timestamp = time.timestamp();
     DateTime::<Utc>::from_timestamp(timestamp, 0).ok_or_else(|| "Invalid timestamp".into())
+}
+
+/// Extract validity period from a PEM-encoded certificate
+pub fn extract_cert_validity(cert_pem: &str) -> Result<(DateTime<Utc>, DateTime<Utc>), Box<dyn Error>> {
+    let pem = parse(cert_pem.as_bytes())?;
+
+    if pem.tag() != "CERTIFICATE" {
+        return Err("Not a certificate PEM block".into());
+    }
+
+    let (_, cert) = X509Certificate::from_der(pem.contents())?;
+
+    let not_before = asn1time_to_datetime(&cert.validity().not_before)?;
+    let not_after = asn1time_to_datetime(&cert.validity().not_after)?;
+
+    Ok((not_before, not_after))
 }

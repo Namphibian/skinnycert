@@ -1,6 +1,6 @@
 use clap::Parser;
 use skinnycert::server::config::{configure_environment, ServerListeningAddress, ServerPort};
-use skinnycert::server::system::run;
+use skinnycert::server::app::run;
 use std::net::IpAddr;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Configure environment with all parameters
-    let config = match configure_environment(server_address, server_port, cli.workers) {
+    let config = match configure_environment(server_address, server_port, cli.workers).await {
         Ok(cfg) => cfg,
         Err(e) => {
             eprintln!("Configuration error: {}", e);
@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Run the server using the pre-bound listener
-    run(config.listener, config.worker_threads)?.await?;
+    run(config.listener, config.worker_threads, config.db_pool)?.await?;
 
     Ok(())
 }
