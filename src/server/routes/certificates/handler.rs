@@ -1,12 +1,11 @@
-use x509_parser::prelude::X509Certificate;
-use x509_parser::prelude::FromDer;
-use crate::server::models::certificates::CertificateGenerationRequest;
-use crate::server::models::certificate_repository::CertificateRepository;
 use super::dto::{CertificateResponseDto, CreateCertificateDto, PatchCertificateDto};
+use crate::server::models::certificate_repository::CertificateRepository;
+use crate::server::models::certificates::CertificateGenerationRequest;
 use actix_web::{HttpResponse, Responder, web};
+use sha2::{Digest, Sha256};
 use uuid::Uuid;
-use sha2::{Sha256, Digest};
-
+use x509_parser::prelude::FromDer;
+use x509_parser::prelude::X509Certificate;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
 pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
@@ -14,11 +13,20 @@ pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
 
     match repo.find_all_active().await {
         Ok(certs) => {
-            let dtos: Vec<CertificateResponseDto> = certs
+            let dtos: Result<Vec<_>, _> = certs
                 .into_iter()
-                .map(|c| c.into())
+                .map(CertificateResponseDto::try_from)
                 .collect();
-            HttpResponse::Ok().json(dtos)
+            match dtos {
+                Ok(valid_dtos) => HttpResponse::Ok().json(valid_dtos),
+                Err(e) => {
+                    tracing::error!("Failed to convert certificate: {}", e);
+                    HttpResponse::UnprocessableEntity().json(serde_json::json!({
+                        "error": "Invalid certificate format",
+                        "message": e.to_string()
+                    }))
+                }
+            }
         }
         Err(e) => {
             tracing::error!("Failed to retrieve certificates: {}", e);
@@ -33,7 +41,7 @@ pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
 #[tracing::instrument(name = "Create Certificate", skip(pool, payload))]
 pub async fn post_handler(
     pool: web::Data<sqlx::PgPool>,
-    payload: web::Json<CreateCertificateDto>
+    payload: web::Json<CreateCertificateDto>,
 ) -> impl Responder {
     let dto = payload.into_inner();
 
@@ -51,53 +59,58 @@ pub async fn post_handler(
         Ok(keys) => keys,
         Err(e) => {
             tracing::error!("Failed to generate key and CSR: {}", e);
-            return HttpResponse::InternalServerError()
-                .json(serde_json::json!({
-                    "error": "Failed to generate key and CSR",
-                    "message": e.to_string()
-                }));
+            return HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Failed to generate key and CSR",
+                "message": e.to_string()
+            }));
         }
     };
 
     // Store in database
     let repo = CertificateRepository::new(pool.get_ref().clone());
 
-    let cert_id = match repo.create(
-        &csr_pem,
-        &private_key_pem,
-        &public_key_pem,
-        dto.key_algorithm,
-        dto.key_strength,
-        dto.subject.organization.as_deref(),
-        dto.subject.organizational_unit.as_deref(),
-        dto.subject.country.as_deref(),
-        dto.subject.state_or_province.as_deref(),
-        dto.subject.locality.as_deref(),
-        dto.subject.email.as_deref(),
-        &dto.sans,
-    ).await {
+    let cert_id = match repo
+        .create(
+            &csr_pem,
+            &private_key_pem,
+            &public_key_pem,
+            dto.key_algorithm,
+            dto.key_strength,
+            dto.subject.organization.as_deref(),
+            dto.subject.organizational_unit.as_deref(),
+            dto.subject.country.as_deref(),
+            dto.subject.state_or_province.as_deref(),
+            dto.subject.locality.as_deref(),
+            dto.subject.email.as_deref(),
+            &dto.sans,
+        )
+        .await
+    {
         Ok(id) => id,
         Err(e) => {
             tracing::error!("Failed to store certificate in database: {}", e);
-            return HttpResponse::InternalServerError()
-                .json(serde_json::json!({
-                    "error": "Failed to store certificate",
-                    "message": e.to_string()
-                }));
+            return HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Failed to store certificate",
+                "message": e.to_string()
+            }));
         }
     };
 
     // Retrieve the created certificate
     match repo.find_by_id(cert_id).await {
-        Ok(Some(cert)) => {
-            let response_dto: CertificateResponseDto = cert.into();
-            HttpResponse::Created().json(response_dto)
-        }
-        Ok(None) => {
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Certificate created but not found"
-            }))
-        }
+        Ok(Some(cert)) => match CertificateResponseDto::try_from(cert) {
+            Ok(response_dto) => HttpResponse::Created().json(response_dto),
+            Err(e) => {
+                tracing::error!("Failed to convert certificate: {}", e);
+                HttpResponse::UnprocessableEntity().json(serde_json::json!({
+                    "error": "Invalid certificate format",
+                    "message": e.to_string()
+                }))
+            }
+        },
+        Ok(None) => HttpResponse::InternalServerError().json(serde_json::json!({
+            "error": "Certificate created but not found"
+        })),
         Err(e) => {
             tracing::error!("Failed to retrieve created certificate: {}", e);
             HttpResponse::InternalServerError().json(serde_json::json!({
@@ -111,21 +124,27 @@ pub async fn post_handler(
 #[tracing::instrument(name = "Get Certificate by ID", skip(pool))]
 pub async fn get_by_id_handler(
     pool: web::Data<sqlx::PgPool>,
-    path: web::Path<Uuid>
+    path: web::Path<Uuid>,
 ) -> impl Responder {
     let cert_id = path.into_inner();
     let repo = CertificateRepository::new(pool.get_ref().clone());
 
+    use std::convert::TryFrom;
+
     match repo.find_by_id(cert_id).await {
-        Ok(Some(cert)) => {
-            let dto: CertificateResponseDto = cert.into();
-            HttpResponse::Ok().json(dto)
-        }
-        Ok(None) => {
-            HttpResponse::NotFound().json(serde_json::json!({
-                "error": "Certificate not found"
-            }))
-        }
+        Ok(Some(cert)) => match CertificateResponseDto::try_from(cert) {
+            Ok(dto) => HttpResponse::Ok().json(dto),
+            Err(e) => {
+                tracing::error!("Failed to convert certificate: {}", e);
+                HttpResponse::UnprocessableEntity().json(serde_json::json!({
+                    "error": "Invalid certificate format",
+                    "message": e.to_string()
+                }))
+            }
+        },
+        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
+            "error": "Certificate not found"
+        })),
         Err(e) => {
             tracing::error!("Failed to retrieve certificate: {}", e);
             HttpResponse::InternalServerError().json(serde_json::json!({
@@ -146,18 +165,17 @@ pub async fn put_handler() -> impl Responder {
 pub async fn patch_handler(
     pool: web::Data<sqlx::PgPool>,
     path: web::Path<Uuid>,
-    payload: web::Json<PatchCertificateDto>
+    payload: web::Json<PatchCertificateDto>,
 ) -> impl Responder {
     let cert_id = path.into_inner();
     let dto = payload.into_inner();
 
     // Parse and validate the certificate
 
-
-        let pem = match pem::parse(&dto.cert_pem) {
-            Ok(p) => p,
-            Err(e) => {
-                return HttpResponse::BadRequest().json(serde_json::json!({
+    let pem = match pem::parse(&dto.cert_pem) {
+        Ok(p) => p,
+        Err(e) => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
                     "error": "Invalid PEM format",
                     "message": e.to_string()
             }));
@@ -181,23 +199,25 @@ pub async fn patch_handler(
     };
 
     // Extract validity
-    let valid_from = match chrono::DateTime::from_timestamp(cert.validity().not_before.timestamp(), 0) {
-        Some(dt) => dt,
-        None => {
-            return HttpResponse::BadRequest().json(serde_json::json!({
-                "error": "Invalid validity start time"
-            }));
-        }
-    };
+    let valid_from =
+        match chrono::DateTime::from_timestamp(cert.validity().not_before.timestamp(), 0) {
+            Some(dt) => dt,
+            None => {
+                return HttpResponse::BadRequest().json(serde_json::json!({
+                    "error": "Invalid validity start time"
+                }));
+            }
+        };
 
-    let expires_at = match chrono::DateTime::from_timestamp(cert.validity().not_after.timestamp(), 0) {
-        Some(dt) => dt,
-        None => {
-            return HttpResponse::BadRequest().json(serde_json::json!({
-                "error": "Invalid expiry time"
-            }));
-        }
-    };
+    let expires_at =
+        match chrono::DateTime::from_timestamp(cert.validity().not_after.timestamp(), 0) {
+            Some(dt) => dt,
+            None => {
+                return HttpResponse::BadRequest().json(serde_json::json!({
+                    "error": "Invalid expiry time"
+                }));
+            }
+        };
 
     // Calculate fingerprint (SHA-256)
     let mut hasher = Sha256::new();
@@ -207,26 +227,33 @@ pub async fn patch_handler(
     // Update database
     let repo = CertificateRepository::new(pool.get_ref().clone());
 
-    match repo.patch_certificate(
-        cert_id,
-        &dto.cert_pem,
-        dto.chain_pem.as_deref(),
-        &fingerprint,
-        valid_from,
-        expires_at,
-    ).await {
+    match repo
+        .patch_certificate(
+            cert_id,
+            &dto.cert_pem,
+            dto.chain_pem.as_deref(),
+            &fingerprint,
+            valid_from,
+            expires_at,
+        )
+        .await
+    {
         Ok(_) => {
             // Retrieve updated certificate
             match repo.find_by_id(cert_id).await {
-                Ok(Some(cert)) => {
-                    let response_dto: CertificateResponseDto = cert.into();
-                    HttpResponse::Ok().json(response_dto)
-                }
-                Ok(None) => {
-                    HttpResponse::NotFound().json(serde_json::json!({
-                        "error": "Certificate not found after update"
-                    }))
-                }
+                Ok(Some(cert)) => match CertificateResponseDto::try_from(cert) {
+                    Ok(response_dto) => HttpResponse::Ok().json(response_dto),
+                    Err(e) => {
+                        tracing::error!("Failed to convert updated certificate: {}", e);
+                        HttpResponse::UnprocessableEntity().json(serde_json::json!({
+                            "error": "Invalid certificate format after update",
+                            "message": e.to_string()
+                        }))
+                    }
+                },
+                Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
+                    "error": "Certificate not found after update"
+                })),
                 Err(e) => {
                     tracing::error!("Failed to retrieve updated certificate: {}", e);
                     HttpResponse::InternalServerError().json(serde_json::json!({
@@ -249,15 +276,13 @@ pub async fn patch_handler(
 #[tracing::instrument(name = "Delete Certificate", skip(pool))]
 pub async fn delete_handler(
     pool: web::Data<sqlx::PgPool>,
-    path: web::Path<Uuid>
+    path: web::Path<Uuid>,
 ) -> impl Responder {
     let cert_id = path.into_inner();
     let repo = CertificateRepository::new(pool.get_ref().clone());
 
     match repo.soft_delete(cert_id).await {
-        Ok(_) => {
-            HttpResponse::NoContent().finish()
-        }
+        Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => {
             tracing::error!("Failed to delete certificate: {}", e);
             HttpResponse::BadRequest().json(serde_json::json!({

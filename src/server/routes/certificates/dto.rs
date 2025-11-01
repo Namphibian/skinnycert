@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::server::models::certificates::{
-    CertificateSubject, KeyAlgorithm, KeyStrength, RsaKeySize, EcdsaCurve
+    CertificateSubject, EcdsaCurve, KeyAlgorithm, KeyStrength, RsaKeySize,
 };
 use crate::server::models::db_certificate::DbCertificateWithSans;
 
@@ -48,43 +48,27 @@ pub struct PatchCertificateDto {
 }
 
 /// Convert DbCertificateWithSans to CertificateResponseDto
-impl From<DbCertificateWithSans> for CertificateResponseDto {
-    fn from(db_cert: DbCertificateWithSans) -> Self {
-        let key_strength = match db_cert.key_algorithm {
+impl TryFrom<DbCertificateWithSans> for CertificateResponseDto {
+    type Error = Box<dyn std::error::Error + Send + Sync>;
 
-            key_algorithm @ KeyAlgorithm::RSA => {
-                let size = match db_cert.rsa_key_size.as_deref() {
-                    Some("2048") => RsaKeySize::Bits2048,
-                    Some("3072") => RsaKeySize::Bits3072,
-                    Some("4096") => RsaKeySize::Bits4096,
-                    _ => RsaKeySize::Bits2048, // default
-                };
+    fn try_from(db_cert: DbCertificateWithSans) -> Result<Self, Self::Error> {
+        let key_strength = match db_cert.key_algorithm {
+            KeyAlgorithm::RSA => {
+                let size = db_cert.rsa_key_size.ok_or("Missing RSA key size for RSA algorithm")?;
                 KeyStrength::Rsa(size)
             }
-           key_algorithm @ KeyAlgorithm::ECDSA => {
-                let curve = match db_cert.ecdsa_curve.as_deref() {
-                    Some("P256") => EcdsaCurve::P256,
-                    Some("P384") => EcdsaCurve::P384,
-                    Some("P521") => EcdsaCurve::P521,
-                    _ => EcdsaCurve::P256, // default
-                };
+            KeyAlgorithm::ECDSA => {
+                let curve = db_cert.ecdsa_curve.ok_or("Missing ECDSA curve for ECDSA algorithm")?;
                 KeyStrength::Ecdsa(curve)
             }
-            _ => KeyStrength::Rsa(RsaKeySize::Bits2048), // fallback
         };
 
-        let key_algorithm = match db_cert.key_algorithm {
-            KeyAlgorithm::RSA => KeyAlgorithm::RSA,
-            KeyAlgorithm::ECDSA => KeyAlgorithm::ECDSA,
-            _ => KeyAlgorithm::RSA, // fallback
-        };
-
-        Self {
+        Ok(Self {
             id: db_cert.id,
             csr_pem: db_cert.csr_pem,
             cert_pem: db_cert.cert_pem,
             chain_pem: db_cert.chain_pem,
-            key_algorithm,
+            key_algorithm: db_cert.key_algorithm,
             key_strength,
             subject: CertificateSubject {
                 organization: db_cert.organization,
@@ -100,6 +84,7 @@ impl From<DbCertificateWithSans> for CertificateResponseDto {
             expires_at: db_cert.expires_at,
             created_at: db_cert.created_at,
             cert_uploaded_at: db_cert.cert_uploaded_at,
-        }
+        })
     }
 }
+

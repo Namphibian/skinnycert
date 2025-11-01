@@ -19,15 +19,22 @@ pub enum KeyAlgorithm {
 }
 
 /// Supported RSA key sizes
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Type)]
+#[sqlx(type_name = "rsa_key_size")]
 pub enum RsaKeySize {
     #[serde(rename = "2048")]
+    #[sqlx(rename = "2048")]
     Bits2048,
+
     #[serde(rename = "3072")]
+    #[sqlx(rename = "3072")]
     Bits3072,
+
     #[serde(rename = "4096")]
+    #[sqlx(rename = "4096")]
     Bits4096,
 }
+
 
 impl RsaKeySize {
     pub fn as_bits(&self) -> u32 {
@@ -39,16 +46,13 @@ impl RsaKeySize {
     }
 }
 
-/// Supported ECDSA curves
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Type)]
+#[sqlx(type_name = "ecdsa_curve")]
 pub enum EcdsaCurve {
-    /// NIST P-256 (secp256r1) - 256-bit security
     #[serde(rename = "P256")]
     P256,
-    /// NIST P-384 (secp384r1) - 384-bit security
     #[serde(rename = "P384")]
     P384,
-    /// NIST P-521 (secp521r1) - 521-bit security
     #[serde(rename = "P521")]
     P521,
 }

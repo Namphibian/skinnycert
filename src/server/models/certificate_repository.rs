@@ -1,10 +1,10 @@
-use sqlx::PgPool;
-use uuid::Uuid;
-use std::error::Error;
 use chrono::Utc;
+use sqlx::PgPool;
+use std::error::Error;
+use uuid::Uuid;
 
-use super::db_certificate::{DbCertificate, DbCertificateWithSans, DbCertificateSan};
-use super::certificates::{KeyAlgorithm, KeyStrength, RsaKeySize, EcdsaCurve};
+use super::certificates::{EcdsaCurve, KeyAlgorithm, KeyStrength, RsaKeySize};
+use super::db_certificate::{DbCertificate, DbCertificateSan, DbCertificateWithSans};
 
 pub struct CertificateRepository {
     pool: PgPool,
@@ -89,13 +89,13 @@ impl CertificateRepository {
                 r#"
                 INSERT INTO certificate_sans (certificate_id, san_value, san_order)
                 VALUES ($1, $2, $3)
-                "#
+                "#,
             )
-                .bind(cert_id)
-                .bind(san)
-                .bind(index as i32)
-                .execute(&mut *tx)
-                .await?;
+            .bind(cert_id)
+            .bind(san)
+            .bind(index as i32)
+            .execute(&mut *tx)
+            .await?;
         }
 
         tx.commit().await?;
@@ -104,16 +104,19 @@ impl CertificateRepository {
     }
 
     /// Get certificate by ID with SANs
-    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<DbCertificateWithSans>, Box<dyn Error>> {
+    pub async fn find_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<DbCertificateWithSans>, Box<dyn Error>> {
         let result = sqlx::query_as::<_, DbCertificateWithSans>(
             r#"
             SELECT * FROM certificates_with_sans
             WHERE id = $1 AND deleted_at IS NULL
-            "#
+            "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?;
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(result)
     }
@@ -125,10 +128,10 @@ impl CertificateRepository {
             SELECT * FROM certificates_with_sans
             WHERE deleted_at IS NULL
             ORDER BY created_at DESC
-            "#
+            "#,
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(results)
     }
@@ -155,16 +158,16 @@ impl CertificateRepository {
             WHERE id = $1
               AND cert_pem IS NULL
               AND deleted_at IS NULL
-            "#
+            "#,
         )
-            .bind(id)
-            .bind(cert_pem)
-            .bind(chain_pem)
-            .bind(fingerprint)
-            .bind(valid_from)
-            .bind(expires_at)
-            .execute(&self.pool)
-            .await?;
+        .bind(id)
+        .bind(cert_pem)
+        .bind(chain_pem)
+        .bind(fingerprint)
+        .bind(valid_from)
+        .bind(expires_at)
+        .execute(&self.pool)
+        .await?;
 
         if result.rows_affected() == 0 {
             return Err("Certificate not found, already patched, or deleted".into());
@@ -180,11 +183,11 @@ impl CertificateRepository {
             UPDATE certificates
             SET deleted_at = NOW()
             WHERE id = $1 AND deleted_at IS NULL
-            "#
+            "#,
         )
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
 
         if result.rows_affected() == 0 {
             return Err("Certificate not found or already deleted".into());
