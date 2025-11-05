@@ -1,12 +1,17 @@
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
+// Generate the private key based on algorithm and strength
+use openssl::ec::{EcGroup, EcKey};
+use openssl::hash::MessageDigest;
+use openssl::nid::Nid;
 use openssl::pkey::PKey;
+use openssl::rsa::Rsa;
+use openssl::x509::extension::SubjectAlternativeName;
+use openssl::x509::{X509Name, X509Req};
 use pem::parse;
-use std::error::Error;
 use sqlx::Type;
+use std::error::Error;
 use x509_parser::prelude::{ASN1Time, FromDer, X509Certificate};
 
 /// Supported key algorithm types
@@ -35,9 +40,8 @@ pub enum RsaKeySize {
     Bits4096,
 }
 
-
 impl RsaKeySize {
-    pub fn as_bits(&self) -> u32 {
+    pub fn as_security_bits(&self) -> u32 {
         match self {
             RsaKeySize::Bits2048 => 2048,
             RsaKeySize::Bits3072 => 3072,
@@ -66,7 +70,7 @@ impl EcdsaCurve {
         }
     }
 
-    pub fn security_bits(&self) -> u32 {
+    pub fn as_security_bits(&self) -> u32 {
         match self {
             EcdsaCurve::P256 => 256,
             EcdsaCurve::P384 => 384,
@@ -138,19 +142,12 @@ impl CertificateGenerationRequest {
     /// Returns (private_key_pem, csr_pem, public_key_pem)
     pub fn generate_key_and_csr(&self) -> Result<(String, String, String), Box<dyn Error>> {
         // Validate the request first
-        self.validate().map_err(|e| -> Box<dyn Error> { e.into() })?;
-
-        // Generate the private key based on algorithm and strength
-        use openssl::rsa::Rsa;
-        use openssl::ec::{EcKey, EcGroup};
-        use openssl::nid::Nid;
-        use openssl::pkey::PKey;
-        use openssl::x509::{X509Name, X509Req};
-        use openssl::hash::MessageDigest;
+        self.validate()
+            .map_err(|e| -> Box<dyn Error> { e.into() })?;
 
         let pkey = match (&self.key_algorithm, &self.key_strength) {
             (KeyAlgorithm::RSA, KeyStrength::Rsa(rsa_size)) => {
-                let rsa = Rsa::generate(rsa_size.as_bits())?;
+                let rsa = Rsa::generate(rsa_size.as_security_bits())?;
                 PKey::from_rsa(rsa)?
             }
             (KeyAlgorithm::ECDSA, KeyStrength::Ecdsa(curve)) => {
@@ -207,7 +204,6 @@ impl CertificateGenerationRequest {
 
         // Add Subject Alternative Names (SANs) if present
         if !self.sans.is_empty() {
-            use openssl::x509::extension::SubjectAlternativeName;
             let mut san_builder = SubjectAlternativeName::new();
 
             for san in &self.sans {
@@ -278,7 +274,9 @@ pub fn asn1time_to_datetime(time: &ASN1Time) -> Result<DateTime<Utc>, Box<dyn Er
 }
 
 /// Extract validity period from a PEM-encoded certificate
-pub fn extract_cert_validity(cert_pem: &str) -> Result<(DateTime<Utc>, DateTime<Utc>), Box<dyn Error>> {
+pub fn extract_cert_validity(
+    cert_pem: &str,
+) -> Result<(DateTime<Utc>, DateTime<Utc>), Box<dyn Error>> {
     let pem = parse(cert_pem.as_bytes())?;
 
     if pem.tag() != "CERTIFICATE" {
