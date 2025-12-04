@@ -1,11 +1,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-use crate::server::models::certificates::{
-    CertificateSubject, EcdsaCurve, KeyAlgorithm, KeyStrength, RsaKeySize,
-};
-use crate::server::models::db_certificate::DbCertificateWithSans;
+use crate::server::models::certificates::certificates_model::{CertificateSubject, KeyAlgorithm, KeyStrength};
+use crate::server::models::certificates::db::DbCertificateWithSans;
 
 /// DTO for certificate response (sent to clients)
 #[derive(Debug, Serialize, Deserialize)]
@@ -17,6 +14,7 @@ pub struct CertificateResponseDto {
     pub key_algorithm: KeyAlgorithm,
     pub key_strength: KeyStrength,
     pub subject: CertificateSubject,
+    pub common_name: String,
     pub sans: Vec<String>,
     pub fingerprint: Option<String>,
     pub valid_from: Option<DateTime<Utc>>,
@@ -79,6 +77,7 @@ impl TryFrom<DbCertificateWithSans> for CertificateResponseDto {
                 email: db_cert.email,
             },
             sans: db_cert.sans,
+            common_name: db_cert.common_name.unwrap_or_default(),
             fingerprint: db_cert.fingerprint,
             valid_from: db_cert.valid_from,
             expires_at: db_cert.expires_at,

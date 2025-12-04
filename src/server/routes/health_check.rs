@@ -45,10 +45,11 @@ const PATH: &'static str = "/health";
 ///     .await
 /// }
 /// ```
+///
+
 pub fn configure_health_check(cfg: &mut web::ServiceConfig) {
     // Register a GET route for health checking
     cfg.route(PATH, web::get().to(get_handler));
-
     // Register a POST route for health checking
     cfg.route(PATH, web::post().to(post_handler));
 }

@@ -1,29 +1,105 @@
--- Enable UUID extension for primary keys
+-- Enable UUID extension for primary rsa_keys
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Enum types for key algorithms and strengths
-CREATE TYPE key_algorithm AS ENUM ('RSA', 'ECDSA');
-CREATE TYPE rsa_key_size AS ENUM ('2048', '3072', '4096');
-CREATE TYPE ecdsa_curve AS ENUM ('P256', 'P384', 'P521');
+-- CREATE TYPE key_algorithm AS ENUM ('RSA', 'ECDSA');
+-- CREATE TYPE rsa_key_size AS ENUM ('2048', '3072', '4096');
+-- CREATE TYPE ecdsa_curve AS ENUM ('P256', 'P384', 'P521');
 
--- Main certificates table
+
+-- ============================================================
+-- Parent table: rsa_keys (polymorphic base)
+-- ============================================================
+CREATE TABLE key_algorithms
+(
+    id         UUID PRIMARY KEY     DEFAULT uuid_generate_v4(),
+    algorithm  TEXT        NOT NULL, -- 'RSA', 'ECDSA', future types
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
+-- Child table: RSA (inherits rsa_keys)
+-- ============================================================
+CREATE TABLE rsa_key_algorithm
+(
+    -- Specific RSA parameters
+    rsa_key_size INTEGER NOT NULL, -- e.g., 2048, 3072, 4096
+    display_name TEXT
+) INHERITS (key_algorithms);
+
+-- Trigger to enforce the 'algorithm' column equals 'RSA' on child inserts/updates
+CREATE OR REPLACE FUNCTION enforce_rsa_algorithm_child()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF NEW.algorithm IS NULL THEN
+        NEW.algorithm := 'RSA';
+    ELSIF NEW.algorithm <> 'RSA' THEN
+        RAISE EXCEPTION 'Algorithm mismatch in rsa_key_algorithm: expected RSA, got %', NEW.algorithm;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER rsa_child_algorithm_check
+    BEFORE INSERT OR UPDATE
+    ON rsa_key_algorithm
+    FOR EACH ROW
+EXECUTE FUNCTION enforce_rsa_algorithm_child();
+
+
+-- ============================================================
+-- Child table: ECDSA (inherits rsa_keys)
+-- ============================================================
+CREATE TABLE ecdsa_key_algorithm
+(
+    -- Specific ECDSA parameters
+    curve        TEXT    NOT NULL, -- e.g., 'P256', 'P384', 'P521'
+    nid_name     TEXT    NOT NULL, -- e.g., 'X9_62_PRIME256V1', 'SECP384R1', 'SECP521R1'
+    nid_value    INTEGER NOT NULL, -- OpenSSL internal numeric ID
+    display_name TEXT,             -- e.g., 'NIST P-256'
+    standard     TEXT,             -- e.g., 'X9.62', 'SECG', 'NIST'
+    deprecated   BOOLEAN NOT NULL DEFAULT FALSE
+) INHERITS (key_algorithms);
+
+-- Trigger to enforce the 'algorithm' column equals 'ECDSA' on child inserts/updates
+CREATE OR REPLACE FUNCTION enforce_ecdsa_algorithm_child()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF NEW.algorithm IS NULL THEN
+        NEW.algorithm := 'ECDSA';
+    ELSIF NEW.algorithm <> 'ECDSA' THEN
+        RAISE EXCEPTION 'Algorithm mismatch in ecdsa_key_algorithm: expected ECDSA, got %', NEW.algorithm;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ecdsa_child_algorithm_check
+    BEFORE INSERT OR UPDATE
+    ON ecdsa_key_algorithm
+    FOR EACH ROW
+EXECUTE FUNCTION enforce_ecdsa_algorithm_child();
+
+-- ============================================================
+-- Main certificates table (links only to base rsa_keys)
+-- ============================================================
 CREATE TABLE certificates
 (
-    id                  UUID PRIMARY KEY       DEFAULT uuid_generate_v4(),
+    id                  UUID PRIMARY KEY     DEFAULT uuid_generate_v4(),
 
-    -- PEM data (encrypted private keys recommended in production)
-    csr_pem             TEXT          NOT NULL,
-    cert_pem            TEXT,        -- NULL until signed by CA
-    key_pem             TEXT          NOT NULL,
-    public_key_pem      TEXT          NOT NULL,
+    -- PEM data
+    csr_pem             TEXT        NOT NULL,
+    cert_pem            TEXT, -- NULL until signed by CA
+    key_pem             TEXT        NOT NULL,
+    public_key_pem      TEXT        NOT NULL,
     chain_pem           TEXT,
 
-    -- Key configuration
-    key_algorithm       key_algorithm NOT NULL,
-    rsa_key_size        rsa_key_size,
-    ecdsa_curve         ecdsa_curve,
+    -- Link to polymorphic base algorithm row (points to either RSA or ECDSA child row)
+    key_algorithm_id    UUID        NOT NULL REFERENCES key_algorithms (id),
 
-    -- Subject details (stored as separate columns for queryability)
+    -- Subject details
     organization        VARCHAR(255),
     organizational_unit VARCHAR(255),
     country             CHAR(2),
@@ -37,17 +113,170 @@ CREATE TABLE certificates
     expires_at          TIMESTAMPTZ,
 
     -- Audit timestamps
-    created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
-    cert_uploaded_at    TIMESTAMPTZ, -- When signed cert was uploaded
-    deleted_at          TIMESTAMPTZ,
-
-    -- Constraints
-    CONSTRAINT key_strength_check CHECK (
-        (key_algorithm = 'RSA' AND rsa_key_size IS NOT NULL AND ecdsa_curve IS NULL) OR
-        (key_algorithm = 'ECDSA' AND ecdsa_curve IS NOT NULL AND rsa_key_size IS NULL)
-        )
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    cert_uploaded_at    TIMESTAMPTZ,
+    deleted_at          TIMESTAMPTZ
 );
+
+-- ============================================================
+-- Integrity & audit triggers
+-- ============================================================
+
+-- Auto-update updated_at timestamp on certificates
+CREATE OR REPLACE FUNCTION update_cert_timestamp()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER cert_update_timestamp
+    BEFORE UPDATE
+    ON certificates
+    FOR EACH ROW
+EXECUTE FUNCTION update_cert_timestamp();
+
+-- Ensure referenced key_algorithm_id exists in a child table (RSA or ECDSA)
+-- Note: The FK ensures existence in parent; this trigger ensures it is realized in a child.
+CREATE OR REPLACE FUNCTION enforce_algorithm_has_child()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    is_rsa   BOOLEAN;
+    is_ecdsa BOOLEAN;
+BEGIN
+    -- Check if the referenced id exists in either child
+    SELECT EXISTS(SELECT 1 FROM rsa_key_algorithm WHERE id = NEW.key_algorithm_id) INTO is_rsa;
+    SELECT EXISTS(SELECT 1 FROM ecdsa_key_algorithm WHERE id = NEW.key_algorithm_id) INTO is_ecdsa;
+
+    IF NOT (is_rsa OR is_ecdsa) THEN
+        RAISE EXCEPTION 'key_algorithm_id % must reference a child row in rsa_key_algorithm or ecdsa_key_algorithm', NEW.key_algorithm_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER certificates_algorithm_child_check
+    BEFORE INSERT OR UPDATE
+    ON certificates
+    FOR EACH ROW
+EXECUTE FUNCTION enforce_algorithm_has_child();
+
+
+-- Optional: prevent creating child rows with duplicate IDs across children
+-- (rare unless manually setting IDs). Typically the DEFAULT uuid_generate_v4() avoids collision.
+-- This guard ensures a key_algorithm id is unique across the inheritance hierarchy.
+CREATE OR REPLACE FUNCTION enforce_unique_child_ids()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- If inserting into RSA, ensure the same id does not exist in ECDSA, and vice versa
+    IF TG_TABLE_NAME = 'rsa_key_algorithm' THEN
+        IF EXISTS (SELECT 1 FROM ecdsa_key_algorithm WHERE id = NEW.id) THEN
+            RAISE EXCEPTION 'Algorithm id % already used in ecdsa_key_algorithm', NEW.id;
+        END IF;
+    ELSIF TG_TABLE_NAME = 'ecdsa_key_algorithm' THEN
+        IF EXISTS (SELECT 1 FROM rsa_key_algorithm WHERE id = NEW.id) THEN
+            RAISE EXCEPTION 'Algorithm id % already used in rsa_key_algorithm', NEW.id;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER enforce_unique_child_ids_rsa
+    BEFORE INSERT
+    ON rsa_key_algorithm
+    FOR EACH ROW
+EXECUTE FUNCTION enforce_unique_child_ids();
+
+CREATE TRIGGER enforce_unique_child_ids_ecdsa
+    BEFORE INSERT
+    ON ecdsa_key_algorithm
+    FOR EACH ROW
+EXECUTE FUNCTION enforce_unique_child_ids();
+
+
+-- ============================================================
+-- Views for polymorphic querying
+-- ============================================================
+
+-- Unified list of available key options (algorithm + parameter + display)
+CREATE OR REPLACE VIEW available_key_options AS
+SELECT 'RSA'                                                            AS algorithm,
+       rsa.rsa_key_size::TEXT                                           AS option,
+       COALESCE(rsa.display_name, 'RSA ' || rsa.rsa_key_size || '-bit') AS display_name,
+       rsa.id                                                           AS key_algorithm_id
+FROM rsa_key_algorithm rsa
+
+UNION ALL
+SELECT 'ECDSA'                                               AS algorithm,
+       ecdsa.curve                                           AS option,
+       COALESCE(ecdsa.display_name, 'ECDSA ' || ecdsa.curve) AS display_name,
+       ecdsa.id                                              AS key_algorithm_id
+FROM ecdsa_key_algorithm ecdsa
+WHERE ecdsa.deprecated = FALSE;
+
+-- Certificates resolved to their algorithm specifics via polymorphic join
+CREATE OR REPLACE VIEW certificates_with_options AS
+SELECT c.id               AS certificate_id,
+       c.key_algorithm_id,
+       ka.algorithm       AS algorithm,
+       rsa.rsa_key_size,
+       rsa.display_name   AS rsa_display,
+       ecdsa.curve        AS ecdsa_curve,
+       ecdsa.nid_name,
+       ecdsa.nid_value,
+       ecdsa.display_name AS ecdsa_display,
+       ecdsa.deprecated   AS ecdsa_deprecated,
+       c.organization,
+       c.organizational_unit,
+       c.country,
+       c.state_or_province,
+       c.locality,
+       c.email,
+       c.fingerprint,
+       c.valid_from,
+       c.expires_at,
+       c.created_at,
+       c.updated_at,
+       c.cert_uploaded_at,
+       c.deleted_at
+FROM certificates c
+         JOIN key_algorithms ka ON c.key_algorithm_id = ka.id
+         LEFT JOIN rsa_key_algorithm rsa ON c.key_algorithm_id = rsa.id
+         LEFT JOIN ecdsa_key_algorithm ecdsa ON c.key_algorithm_id = ecdsa.id;
+
+
+-- ============================================================
+-- Useful indexes
+-- ============================================================
+CREATE INDEX IF NOT EXISTS idx_key_algorithms_algorithm ON key_algorithms (algorithm);
+CREATE INDEX IF NOT EXISTS idx_rsa_key_size ON rsa_key_algorithm (rsa_key_size);
+CREATE INDEX IF NOT EXISTS idx_ecdsa_curve ON ecdsa_key_algorithm (curve);
+CREATE INDEX IF NOT EXISTS idx_certificates_algorithm_id ON certificates (key_algorithm_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_fingerprint ON certificates (fingerprint);
+
+
+-- ============================================================
+-- Initial data: RSA sizes and ECDSA curves with OpenSSL NID
+-- ============================================================
+
+-- RSA rows (algorithm is enforced by trigger; included explicitly for clarity)
+INSERT INTO rsa_key_algorithm (algorithm, rsa_key_size, display_name)
+VALUES ('RSA', 2048, 'RSA 2048-bit'),
+       ('RSA', 3072, 'RSA 3072-bit'),
+       ('RSA', 4096, 'RSA 4096-bit');
+
+-- ECDSA rows (common NIDs)
+INSERT INTO ecdsa_key_algorithm (algorithm, curve, nid_name, nid_value, display_name, standard, deprecated)
+VALUES ('ECDSA', 'P256', 'X9_62_PRIME256V1', 415, 'NIST P-256', 'X9.62', FALSE),
+       ('ECDSA', 'P384', 'SECP384R1', 715, 'NIST P-384', 'SECG', FALSE),
+       ('ECDSA', 'P521', 'SECP521R1', 716, 'NIST P-521', 'SECG', FALSE);
 
 -- Subject Alternative Names (many-to-many relationship)
 CREATE TABLE certificate_sans
@@ -184,3 +413,6 @@ FROM active_certificates c1
         AND c1.id < c2.id -- Avoid duplicates
 WHERE c1.valid_from < c2.expires_at
   AND c2.valid_from < c1.expires_at;
+
+
+

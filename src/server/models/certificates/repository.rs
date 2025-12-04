@@ -3,8 +3,8 @@ use sqlx::PgPool;
 use std::error::Error;
 use uuid::Uuid;
 
-use super::certificates::{EcdsaCurve, KeyAlgorithm, KeyStrength, RsaKeySize};
-use super::db_certificate::{DbCertificate, DbCertificateSan, DbCertificateWithSans};
+use crate::server::models::certificates::certificates_model::{EcdsaCurve, KeyAlgorithm, KeyStrength, RsaKeySize};
+use crate::server::models::certificates::db::{DbCertificateWithSans};
 
 pub struct CertificateRepository {
     pool: PgPool,

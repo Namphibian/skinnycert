@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/LucasPickering/slumber/refs/tags/v4.2.1/schemas/collection.json
+# ^ This enables schema validation and autocomplete in your editor
+# https://github.com/redhat-developer/yaml-language-server
+
+# For basic usage info, see:
+# https://slumber.lucaspickering.me/getting_started.html
+# For all collection options, see:
+# https://slumber.lucaspickering.me/api/request_collection/index.html
+
+name: Skinny Cert
+
+# Profiles are groups of data you can easily switch between. A common usage is
+# to define profiles for various environments of a REST service
+profiles:
+  local:
+    name: Local Testing
+    data:
+      host: http://127.0.0.1:9090
+
+requests:
+  rsa_keys_folder:
+    name: RSA Keys
+    requests:
+      list_all:
+        name: List All
+        method: GET
+        url: "{{ host }}/keys/rsa"
+      get_by_id:
+        name: Get By ID
+        method: GET
+        url: "{{ host }}/keys/rsa/b277f798-481a-40ce-8a55-c1616262cfe5"
+  health_check_folder:
+    name: Health Checks
+    requests:
+      health:
+        name: Health Check
+        method: GET
+        url: "{{ host }}/health"
+
