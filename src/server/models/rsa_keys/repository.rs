@@ -1,7 +1,7 @@
+use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 use sqlx::PgPool;
 use std::error::Error;
 use uuid::Uuid;
-use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 
 pub struct RsaKeyRepository {
     pool: PgPool,
@@ -43,18 +43,15 @@ impl RsaKeyRepository {
         tx.commit().await?;
         Ok(rsa_id)
     }
-    pub async fn find_by_id(
-        &self,
-        id: Uuid,
-    ) -> Result<Option<RSAKeyAlgorithm>, Box<dyn Error>> {
+    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<RSAKeyAlgorithm>, Box<dyn Error>> {
         let result = sqlx::query_as::<_, RSAKeyAlgorithm>(
             r#"
             SELECT * FROM rsa_key_algorithm WHERE id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?;
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(result)
     }
@@ -64,8 +61,8 @@ impl RsaKeyRepository {
             SELECT * FROM rsa_key_algorithm
             "#,
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         Ok(results)
     }

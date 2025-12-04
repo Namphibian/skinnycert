@@ -1,6 +1,6 @@
 use clap::Parser;
-use skinnycert::server::config::{configure_environment, ServerListeningAddress, ServerPort};
 use skinnycert::server::app::run;
+use skinnycert::server::config::{ServerListeningAddress, ServerPort, configure_environment};
 use std::net::IpAddr;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -17,8 +17,6 @@ struct Cli {
     #[arg(short, long)]
     workers: Option<u16>,
 }
-
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
