@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use crate::server::models::repository_errors::RepositoryError;
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
+use crate::server::models::rsa_keys::repository::PatchResult;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RsaKeyAlgorithmResponse{
@@ -20,6 +21,11 @@ pub struct RsaKeyAlgorithmResponse{
 pub struct NewRsaKeyAlgorithmRequest {
     pub rsa_key_size: i32
 }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RsaKeyAlgorithmPatchRequest {
+    pub deprecated: bool,
+}
+
 impl TryFrom<RSAKeyAlgorithm> for RsaKeyAlgorithmResponse {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
@@ -83,6 +89,32 @@ pub fn to_response_list(
             HttpResponse::InternalServerError().json(serde_json::json!({
                 "error": "Database error",
                 "message": e.to_string()
+            }))
+        }
+    }
+}
+pub fn to_patch_response(
+    result: Result<PatchResult<RSAKeyAlgorithm>, RepositoryError>
+) -> HttpResponse {
+    match result {
+        Ok(PatchResult::Updated(model)) => match RsaKeyAlgorithmResponse::try_from(model) {
+            Ok(dto) => HttpResponse::Ok().json(dto),
+            Err(e) => {
+                tracing::error!("Conversion failed: {}", e);
+                HttpResponse::UnprocessableEntity().json(serde_json::json!({
+                    "error": "Invalid RSA key algorithm format",
+                    "message": e.to_string()
+                }))
+            }
+        },
+        Ok(PatchResult::NotFound) => HttpResponse::NotFound().json(serde_json::json!({
+            "error": "RSA Key not found"
+        })),
+        Ok(PatchResult::NotModified) => HttpResponse::NotModified().finish(),
+        Err(e) => {
+            tracing::error!("Repository error: {}", e);
+            HttpResponse::build(e.status_code()).json(serde_json::json!({
+                "error": e.to_string()
             }))
         }
     }

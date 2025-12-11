@@ -20,7 +20,8 @@ CREATE TABLE key_algorithms
     id         uuid PRIMARY KEY     DEFAULT uuid_generate_v4(),
     algorithm  TEXT        NOT NULL, -- 'RSA', 'ECDSA', future types
     created_on timestamptz NOT NULL DEFAULT NOW(),
-    updated_on timestamptz NULL      -- auto-managed by trigger
+    updated_on timestamptz NULL   ,   -- auto-managed by trigger
+    deprecated boolean     NOT NULL DEFAULT FALSE
 );
 -- ============================================================
 -- Child table: RSA (inherits key_algorithms)
@@ -41,10 +42,21 @@ $$
 BEGIN
     -- Enforce RSA key size rule (example: multiple of 1024)
     IF new.algorithm <> 'RSA' THEN
-        RAISE EXCEPTION 'Algorithm mismatch in rsa_key_algorithm: expected RSA, got %', new.algorithm;
+        RAISE EXCEPTION USING
+            ERRCODE = '23514', -- data exception
+            MESSAGE = FORMAT(
+                    'Algorithm mismatch in rsa_key_algorithm: expected RSA, got %s',
+                    new.algorithm
+                      );
     END IF;
-    IF new.key_size % 1024 <> 0 THEN
-        RAISE EXCEPTION 'RSA key size (%) must be a multiple of 1024', new.key_size;
+    -- Enforce RSA key size multiple of 1024
+    IF NEW.key_size % 1024 <> 0 THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514', -- or a more specific code like '23514' (check_violation)
+            MESSAGE = format(
+                    'RSA key size (%s) must be a multiple of 1024',
+                    NEW.key_size
+                      );
     END IF;
 
     RETURN new;
@@ -87,37 +99,92 @@ VALUES
 -- ============================================================
 -- Child table: ECDSA
 -- ============================================================
+DROP TABLE IF EXISTS ecdsa_key_algorithm CASCADE;
 CREATE TABLE ecdsa_key_algorithm
 (
     -- Specific ECDSA parameters
+    display_name TEXT,             -- e.g., 'NIST P-256'
     curve        TEXT    NOT NULL, -- e.g., 'P256', 'P384', 'P521'
     nid_name     TEXT    NOT NULL, -- e.g., 'X9_62_PRIME256V1', 'SECP384R1', 'SECP521R1'
     nid_value    INTEGER NOT NULL, -- OpenSSL internal numeric ID
-    display_name TEXT,             -- e.g., 'NIST P-256'
     standard     TEXT,             -- e.g., 'X9.62', 'SECG', 'NIST'
-    deprecated   BOOLEAN NOT NULL DEFAULT FALSE
+
+    -- Uniqueness constraints
+    CONSTRAINT unique_curve UNIQUE (curve),
+    CONSTRAINT unique_nid_name UNIQUE (nid_name),
+    CONSTRAINT unique_nid_value UNIQUE (nid_value)
 ) INHERITS (key_algorithms);
 
 -- Trigger to enforce the 'algorithm' column equals 'ECDSA' on child inserts/updates
-CREATE OR REPLACE FUNCTION enforce_ecdsa_algorithm_child()
+CREATE OR REPLACE FUNCTION ecdsa_insert_trigger()
     RETURNS TRIGGER AS
 $$
 BEGIN
     IF new.algorithm IS NULL THEN
         new.algorithm := 'ECDSA';
-    ELSIF new.algorithm <> 'ECDSA' THEN
-        RAISE EXCEPTION 'Algorithm mismatch in ecdsa_key_algorithm: expected ECDSA, got %', new.algorithm;
+   ELSIF new.algorithm <> 'ECDSA' THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514', -- data exception
+            MESSAGE = FORMAT(
+                    'Algorithm mismatch in ecdsa_key_algorithm: expected ECDSA, got %s',
+                    new.algorithm
+                      );
     END IF;
     RETURN new;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER ecdsa_child_algorithm_check
+CREATE TRIGGER ecdsa_before_insert
     BEFORE INSERT OR UPDATE
     ON ecdsa_key_algorithm
     FOR EACH ROW
 EXECUTE FUNCTION enforce_ecdsa_algorithm_child();
 
+
+CREATE TRIGGER ecdsa_before_update
+    BEFORE UPDATE
+    ON ecdsa_key_algorithm
+    FOR EACH ROW
+EXECUTE FUNCTION set_updated_on();
+-- ECDSA rows (common NIDs)
+INSERT INTO ecdsa_key_algorithm
+(
+    algorithm,
+    curve,
+    nid_name,
+    nid_value,
+    display_name,
+    standard
+
+)
+VALUES
+    (
+        'ECDSA',
+        'P256',
+        'X9_62_PRIME256V1',
+        415,
+        'NIST P-256',
+        'X9.62'
+
+    ),
+    (
+        'ECDSA',
+        'P384',
+        'SECP384R1',
+        715,
+        'NIST P-384',
+        'SECG'
+
+    ),
+    (
+        'ECDSA',
+        'P521',
+        'SECP521R1',
+        716,
+        'NIST P-521',
+        'SECG'
+
+    );
 -- ============================================================
 -- Main certificates table (links only to base rsa_keys)
 -- ============================================================
@@ -253,10 +320,10 @@ EXECUTE FUNCTION enforce_unique_child_ids();
 
 -- Unified list of available key options (algorithm + parameter + display)
 CREATE OR REPLACE VIEW available_key_options AS
-SELECT 'RSA'                                                            AS algorithm,
+SELECT 'RSA'                                                        AS algorithm,
        rsa.key_size::TEXT                                           AS option,
        COALESCE(rsa.display_name, 'RSA ' || rsa.key_size || '-bit') AS display_name,
-       rsa.id                                                           AS key_algorithm_id
+       rsa.id                                                       AS key_algorithm_id
 FROM rsa_key_algorithm rsa
 
 UNION ALL
@@ -315,45 +382,7 @@ CREATE INDEX IF NOT EXISTS idx_certificates_fingerprint ON certificates (fingerp
 -- RSA rows (algorithm is enforced by trigger; included explicitly for clarity)
 
 
--- ECDSA rows (common NIDs)
-INSERT INTO ecdsa_key_algorithm
-(
-    algorithm,
-    curve,
-    nid_name,
-    nid_value,
-    display_name,
-    standard,
-    deprecated
-)
-VALUES
-    (
-        'ECDSA',
-        'P256',
-        'X9_62_PRIME256V1',
-        415,
-        'NIST P-256',
-        'X9.62',
-        FALSE
-    ),
-    (
-        'ECDSA',
-        'P384',
-        'SECP384R1',
-        715,
-        'NIST P-384',
-        'SECG',
-        FALSE
-    ),
-    (
-        'ECDSA',
-        'P521',
-        'SECP521R1',
-        716,
-        'NIST P-521',
-        'SECG',
-        FALSE
-    );
+
 
 -- Subject Alternative Names (many-to-many relationship)
 CREATE TABLE certificate_sans

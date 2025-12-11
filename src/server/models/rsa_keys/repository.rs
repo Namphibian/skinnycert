@@ -4,6 +4,12 @@ use sqlx::PgPool;
 use std::error::Error;
 use uuid::Uuid;
 
+
+pub enum PatchResult<T> {
+    Updated(T),
+    NotFound,
+    NotModified,
+}
 pub struct RsaKeyRepository {
     pool: PgPool,
 }
@@ -55,5 +61,34 @@ impl RsaKeyRepository {
         .await?;
 
         Ok(results)
+    }
+    pub async fn patch(
+        &self,
+        id: Uuid,
+        deprecated: bool,
+    ) -> Result<PatchResult<RSAKeyAlgorithm>, RepositoryError> {
+        let result = sqlx::query!(
+        r#"
+        UPDATE rsa_key_algorithm
+        SET deprecated = $1
+        WHERE id = $2 AND deprecated <> $1
+        "#,
+        deprecated,
+        id
+    )
+            .execute(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
+
+        if result.rows_affected() == 0 {
+            // Check if the row exists at all
+            match self.find_by_id(id).await? {
+                Some(_) => return Ok(PatchResult::NotModified),
+                None => return Ok(PatchResult::NotFound),
+            }
+        }
+
+        let updated = self.find_by_id(id).await?.unwrap();
+        Ok(PatchResult::Updated(updated))
     }
 }

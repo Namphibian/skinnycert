@@ -1,4 +1,4 @@
-use sqlx::error::DatabaseError;
+
 use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
 #[derive(Debug, Error)]
