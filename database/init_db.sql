@@ -1,55 +1,91 @@
--- Enable UUID extension for primary rsa_keys
+-- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Enum types for key algorithms and strengths
--- CREATE TYPE key_algorithm AS ENUM ('RSA', 'ECDSA');
--- CREATE TYPE rsa_key_size AS ENUM ('2048', '3072', '4096');
--- CREATE TYPE ecdsa_curve AS ENUM ('P256', 'P384', 'P521');
-
-
 -- ============================================================
--- Parent table: rsa_keys (polymorphic base)
+-- Function to set updated_on on inserts/updates
 -- ============================================================
-CREATE TABLE key_algorithms
-(
-    id         UUID PRIMARY KEY     DEFAULT uuid_generate_v4(),
-    algorithm  TEXT        NOT NULL, -- 'RSA', 'ECDSA', future types
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- ============================================================
--- Child table: RSA (inherits rsa_keys)
--- ============================================================
-CREATE TABLE rsa_key_algorithm
-(
-    -- Specific RSA parameters
-    rsa_key_size INTEGER NOT NULL, -- e.g., 2048, 3072, 4096
-    display_name TEXT
-) INHERITS (key_algorithms);
-
--- Trigger to enforce the 'algorithm' column equals 'RSA' on child inserts/updates
-CREATE OR REPLACE FUNCTION enforce_rsa_algorithm_child()
+CREATE OR REPLACE FUNCTION set_updated_on()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    IF NEW.algorithm IS NULL THEN
-        NEW.algorithm := 'RSA';
-    ELSIF NEW.algorithm <> 'RSA' THEN
-        RAISE EXCEPTION 'Algorithm mismatch in rsa_key_algorithm: expected RSA, got %', NEW.algorithm;
+    new.updated_on := NOW();
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql;
+-- ============================================================
+-- Parent table: key_algorithms (polymorphic base)
+-- ============================================================
+DROP TABLE IF EXISTS key_algorithms CASCADE;
+CREATE TABLE key_algorithms
+(
+    id         uuid PRIMARY KEY     DEFAULT uuid_generate_v4(),
+    algorithm  TEXT        NOT NULL, -- 'RSA', 'ECDSA', future types
+    created_on timestamptz NOT NULL DEFAULT NOW(),
+    updated_on timestamptz NULL      -- auto-managed by trigger
+);
+-- ============================================================
+-- Child table: RSA (inherits key_algorithms)
+-- ============================================================
+DROP TABLE IF EXISTS rsa_key_algorithm CASCADE;
+CREATE TABLE rsa_key_algorithm
+(
+    key_size     INTEGER NOT NULL, -- e.g., 2048, 3072, 4096
+    display_name TEXT GENERATED ALWAYS AS (
+        'RSA ' || key_size || '-bit'
+        ) STORED,
+    CONSTRAINT unique_rsa_key_size UNIQUE (key_size)
+) INHERITS (key_algorithms);
+-- Trigger to enforce the 'algorithm' column equals 'RSA' on child inserts/updates
+CREATE OR REPLACE FUNCTION rsa_insert_trigger()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- Enforce RSA key size rule (example: multiple of 1024)
+    IF new.algorithm <> 'RSA' THEN
+        RAISE EXCEPTION 'Algorithm mismatch in rsa_key_algorithm: expected RSA, got %', new.algorithm;
     END IF;
-    RETURN NEW;
+    IF new.key_size % 1024 <> 0 THEN
+        RAISE EXCEPTION 'RSA key size (%) must be a multiple of 1024', new.key_size;
+    END IF;
+
+    RETURN new;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER rsa_child_algorithm_check
-    BEFORE INSERT OR UPDATE
+CREATE TRIGGER rsa_before_insert
+    BEFORE INSERT
     ON rsa_key_algorithm
     FOR EACH ROW
-EXECUTE FUNCTION enforce_rsa_algorithm_child();
+EXECUTE FUNCTION rsa_insert_trigger();
 
+CREATE TRIGGER rsa_before_update
+    BEFORE UPDATE
+    ON rsa_key_algorithm
+    FOR EACH ROW
+EXECUTE FUNCTION set_updated_on();
+-- INSERT Some RSA keys:
+INSERT INTO rsa_key_algorithm
+(
+    algorithm,
+    key_size
+)
+VALUES
+    (
+        'RSA',
+        2048
 
+    ),
+    (
+        'RSA',
+        3072
+
+    ),
+    (
+        'RSA',
+        4096
+
+    );
 -- ============================================================
--- Child table: ECDSA (inherits rsa_keys)
+-- Child table: ECDSA
 -- ============================================================
 CREATE TABLE ecdsa_key_algorithm
 (
@@ -67,12 +103,12 @@ CREATE OR REPLACE FUNCTION enforce_ecdsa_algorithm_child()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    IF NEW.algorithm IS NULL THEN
-        NEW.algorithm := 'ECDSA';
-    ELSIF NEW.algorithm <> 'ECDSA' THEN
-        RAISE EXCEPTION 'Algorithm mismatch in ecdsa_key_algorithm: expected ECDSA, got %', NEW.algorithm;
+    IF new.algorithm IS NULL THEN
+        new.algorithm := 'ECDSA';
+    ELSIF new.algorithm <> 'ECDSA' THEN
+        RAISE EXCEPTION 'Algorithm mismatch in ecdsa_key_algorithm: expected ECDSA, got %', new.algorithm;
     END IF;
-    RETURN NEW;
+    RETURN new;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -87,7 +123,7 @@ EXECUTE FUNCTION enforce_ecdsa_algorithm_child();
 -- ============================================================
 CREATE TABLE certificates
 (
-    id                  UUID PRIMARY KEY     DEFAULT uuid_generate_v4(),
+    id                  uuid PRIMARY KEY     DEFAULT uuid_generate_v4(),
 
     -- PEM data
     csr_pem             TEXT        NOT NULL,
@@ -97,7 +133,7 @@ CREATE TABLE certificates
     chain_pem           TEXT,
 
     -- Link to polymorphic base algorithm row (points to either RSA or ECDSA child row)
-    key_algorithm_id    UUID        NOT NULL REFERENCES key_algorithms (id),
+    key_algorithm_id    uuid        NOT NULL REFERENCES key_algorithms (id),
 
     -- Subject details
     organization        VARCHAR(255),
@@ -109,14 +145,14 @@ CREATE TABLE certificates
 
     -- Certificate metadata
     fingerprint         VARCHAR(64) UNIQUE,
-    valid_from          TIMESTAMPTZ,
-    expires_at          TIMESTAMPTZ,
+    valid_from          timestamptz,
+    expires_at          timestamptz,
 
     -- Audit timestamps
-    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    cert_uploaded_at    TIMESTAMPTZ,
-    deleted_at          TIMESTAMPTZ
+    created_at          timestamptz NOT NULL DEFAULT NOW(),
+    updated_at          timestamptz NOT NULL DEFAULT NOW(),
+    cert_uploaded_at    timestamptz,
+    deleted_at          timestamptz
 );
 
 -- ============================================================
@@ -128,8 +164,8 @@ CREATE OR REPLACE FUNCTION update_cert_timestamp()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    NEW.updated_at := NOW();
-    RETURN NEW;
+    new.updated_at := NOW();
+    RETURN new;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -149,14 +185,20 @@ DECLARE
     is_ecdsa BOOLEAN;
 BEGIN
     -- Check if the referenced id exists in either child
-    SELECT EXISTS(SELECT 1 FROM rsa_key_algorithm WHERE id = NEW.key_algorithm_id) INTO is_rsa;
-    SELECT EXISTS(SELECT 1 FROM ecdsa_key_algorithm WHERE id = NEW.key_algorithm_id) INTO is_ecdsa;
+    SELECT EXISTS(SELECT 1
+                  FROM rsa_key_algorithm
+                  WHERE id = new.key_algorithm_id)
+    INTO is_rsa;
+    SELECT EXISTS(SELECT 1
+                  FROM ecdsa_key_algorithm
+                  WHERE id = new.key_algorithm_id)
+    INTO is_ecdsa;
 
     IF NOT (is_rsa OR is_ecdsa) THEN
-        RAISE EXCEPTION 'key_algorithm_id % must reference a child row in rsa_key_algorithm or ecdsa_key_algorithm', NEW.key_algorithm_id;
+        RAISE EXCEPTION 'key_algorithm_id % must reference a child row in rsa_key_algorithm or ecdsa_key_algorithm', new.key_algorithm_id;
     END IF;
 
-    RETURN NEW;
+    RETURN new;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -175,16 +217,20 @@ CREATE OR REPLACE FUNCTION enforce_unique_child_ids()
 $$
 BEGIN
     -- If inserting into RSA, ensure the same id does not exist in ECDSA, and vice versa
-    IF TG_TABLE_NAME = 'rsa_key_algorithm' THEN
-        IF EXISTS (SELECT 1 FROM ecdsa_key_algorithm WHERE id = NEW.id) THEN
-            RAISE EXCEPTION 'Algorithm id % already used in ecdsa_key_algorithm', NEW.id;
+    IF tg_table_name = 'rsa_key_algorithm' THEN
+        IF EXISTS (SELECT 1
+                   FROM ecdsa_key_algorithm
+                   WHERE id = new.id) THEN
+            RAISE EXCEPTION 'Algorithm id % already used in ecdsa_key_algorithm', new.id;
         END IF;
-    ELSIF TG_TABLE_NAME = 'ecdsa_key_algorithm' THEN
-        IF EXISTS (SELECT 1 FROM rsa_key_algorithm WHERE id = NEW.id) THEN
-            RAISE EXCEPTION 'Algorithm id % already used in rsa_key_algorithm', NEW.id;
+    ELSIF tg_table_name = 'ecdsa_key_algorithm' THEN
+        IF EXISTS (SELECT 1
+                   FROM rsa_key_algorithm
+                   WHERE id = new.id) THEN
+            RAISE EXCEPTION 'Algorithm id % already used in rsa_key_algorithm', new.id;
         END IF;
     END IF;
-    RETURN NEW;
+    RETURN new;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -208,8 +254,8 @@ EXECUTE FUNCTION enforce_unique_child_ids();
 -- Unified list of available key options (algorithm + parameter + display)
 CREATE OR REPLACE VIEW available_key_options AS
 SELECT 'RSA'                                                            AS algorithm,
-       rsa.rsa_key_size::TEXT                                           AS option,
-       COALESCE(rsa.display_name, 'RSA ' || rsa.rsa_key_size || '-bit') AS display_name,
+       rsa.key_size::TEXT                                           AS option,
+       COALESCE(rsa.display_name, 'RSA ' || rsa.key_size || '-bit') AS display_name,
        rsa.id                                                           AS key_algorithm_id
 FROM rsa_key_algorithm rsa
 
@@ -226,7 +272,7 @@ CREATE OR REPLACE VIEW certificates_with_options AS
 SELECT c.id               AS certificate_id,
        c.key_algorithm_id,
        ka.algorithm       AS algorithm,
-       rsa.rsa_key_size,
+       rsa.key_size,
        rsa.display_name   AS rsa_display,
        ecdsa.curve        AS ecdsa_curve,
        ecdsa.nid_name,
@@ -256,7 +302,7 @@ FROM certificates c
 -- Useful indexes
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_key_algorithms_algorithm ON key_algorithms (algorithm);
-CREATE INDEX IF NOT EXISTS idx_rsa_key_size ON rsa_key_algorithm (rsa_key_size);
+CREATE INDEX IF NOT EXISTS idx_rsa_key_size ON rsa_key_algorithm (key_size);
 CREATE INDEX IF NOT EXISTS idx_ecdsa_curve ON ecdsa_key_algorithm (curve);
 CREATE INDEX IF NOT EXISTS idx_certificates_algorithm_id ON certificates (key_algorithm_id);
 CREATE INDEX IF NOT EXISTS idx_certificates_fingerprint ON certificates (fingerprint);
@@ -267,25 +313,56 @@ CREATE INDEX IF NOT EXISTS idx_certificates_fingerprint ON certificates (fingerp
 -- ============================================================
 
 -- RSA rows (algorithm is enforced by trigger; included explicitly for clarity)
-INSERT INTO rsa_key_algorithm (algorithm, rsa_key_size, display_name)
-VALUES ('RSA', 2048, 'RSA 2048-bit'),
-       ('RSA', 3072, 'RSA 3072-bit'),
-       ('RSA', 4096, 'RSA 4096-bit');
+
 
 -- ECDSA rows (common NIDs)
-INSERT INTO ecdsa_key_algorithm (algorithm, curve, nid_name, nid_value, display_name, standard, deprecated)
-VALUES ('ECDSA', 'P256', 'X9_62_PRIME256V1', 415, 'NIST P-256', 'X9.62', FALSE),
-       ('ECDSA', 'P384', 'SECP384R1', 715, 'NIST P-384', 'SECG', FALSE),
-       ('ECDSA', 'P521', 'SECP521R1', 716, 'NIST P-521', 'SECG', FALSE);
+INSERT INTO ecdsa_key_algorithm
+(
+    algorithm,
+    curve,
+    nid_name,
+    nid_value,
+    display_name,
+    standard,
+    deprecated
+)
+VALUES
+    (
+        'ECDSA',
+        'P256',
+        'X9_62_PRIME256V1',
+        415,
+        'NIST P-256',
+        'X9.62',
+        FALSE
+    ),
+    (
+        'ECDSA',
+        'P384',
+        'SECP384R1',
+        715,
+        'NIST P-384',
+        'SECG',
+        FALSE
+    ),
+    (
+        'ECDSA',
+        'P521',
+        'SECP521R1',
+        716,
+        'NIST P-521',
+        'SECG',
+        FALSE
+    );
 
 -- Subject Alternative Names (many-to-many relationship)
 CREATE TABLE certificate_sans
 (
-    id             UUID PRIMARY KEY      DEFAULT uuid_generate_v4(),
-    certificate_id UUID         NOT NULL REFERENCES certificates (id) ON DELETE CASCADE,
+    id             uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
+    certificate_id uuid         NOT NULL REFERENCES certificates (id) ON DELETE CASCADE,
     san_value      VARCHAR(255) NOT NULL,
     san_order      INTEGER      NOT NULL DEFAULT 0, -- First SAN becomes CN
-    created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    created_at     timestamptz  NOT NULL DEFAULT NOW(),
 
     UNIQUE (certificate_id, san_value)
 );
@@ -312,8 +389,8 @@ CREATE OR REPLACE FUNCTION update_updated_at_column()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
+    new.updated_at = NOW();
+    RETURN new;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -331,8 +408,8 @@ SELECT c.*,
                        ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
                        FILTER (WHERE cs.san_value IS NOT NULL),
                        ARRAY []::VARCHAR[]
-       )                                                  as sans,
-       (ARRAY_AGG(cs.san_value ORDER BY cs.san_order))[1] as common_name
+       )                                                  AS sans,
+       (ARRAY_AGG(cs.san_value ORDER BY cs.san_order))[1] AS common_name
 FROM certificates c
          LEFT JOIN certificate_sans cs ON c.id = cs.certificate_id
 GROUP BY c.id;
@@ -372,7 +449,7 @@ SELECT id,
        common_name,
        organization,
        expires_at,
-       expires_at - NOW()                                                  as time_until_expiry,
+       expires_at - NOW()                                                  AS time_until_expiry,
        -- Check if there's a newer cert for the same subject
        EXISTS (SELECT 1
                FROM active_certificates newer
@@ -382,7 +459,7 @@ SELECT id,
                  AND newer.state_or_province = certificates_with_sans.state_or_province
                  AND newer.locality = certificates_with_sans.locality
                  AND newer.common_name = certificates_with_sans.common_name
-                 AND newer.created_at > certificates_with_sans.created_at) as has_renewal
+                 AND newer.created_at > certificates_with_sans.created_at) AS has_renewal
 FROM certificates_with_sans
 WHERE deleted_at IS NULL
   AND expires_at IS NOT NULL
@@ -392,16 +469,16 @@ ORDER BY expires_at;
 
 -- View for overlapping certificates (useful for monitoring zero-downtime rotation)
 CREATE VIEW overlapping_certificates AS
-SELECT c1.id                                                                        as cert_id_1,
+SELECT c1.id                                                                        AS cert_id_1,
        c1.common_name,
-       c1.fingerprint                                                               as fingerprint_1,
-       c1.valid_from                                                                as valid_from_1,
-       c1.expires_at                                                                as expires_at_1,
-       c2.id                                                                        as cert_id_2,
-       c2.fingerprint                                                               as fingerprint_2,
-       c2.valid_from                                                                as valid_from_2,
-       c2.expires_at                                                                as expires_at_2,
-       LEAST(c1.expires_at, c2.expires_at) - GREATEST(c1.valid_from, c2.valid_from) as overlap_duration
+       c1.fingerprint                                                               AS fingerprint_1,
+       c1.valid_from                                                                AS valid_from_1,
+       c1.expires_at                                                                AS expires_at_1,
+       c2.id                                                                        AS cert_id_2,
+       c2.fingerprint                                                               AS fingerprint_2,
+       c2.valid_from                                                                AS valid_from_2,
+       c2.expires_at                                                                AS expires_at_2,
+       LEAST(c1.expires_at, c2.expires_at) - GREATEST(c1.valid_from, c2.valid_from) AS overlap_duration
 FROM active_certificates c1
          JOIN active_certificates c2 ON
     c1.organization = c2.organization
@@ -413,6 +490,8 @@ FROM active_certificates c1
         AND c1.id < c2.id -- Avoid duplicates
 WHERE c1.valid_from < c2.expires_at
   AND c2.valid_from < c1.expires_at;
+
+
 
 
 

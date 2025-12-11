@@ -6,6 +6,7 @@ pub struct RSAKeyAlgorithm {
     pub id: Uuid,
     pub display_name: String,
     pub algorithm: String,
-    pub rsa_key_size: i32,
-    pub created_at: Option<DateTime<Utc>>,
+    pub key_size: i32,
+    pub created_on: Option<DateTime<Utc>>,
+    pub updated_on: Option<DateTime<Utc>>
 }

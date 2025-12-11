@@ -29,6 +29,14 @@ requests:
         name: Get By ID
         method: GET
         url: "{{ host }}/keys/rsa/b277f798-481a-40ce-8a55-c1616262cfe5"
+      create:
+        name: Create
+        method: POST
+        url: "{{ host }}/keys/rsa"
+        body:
+          type: json
+          data:
+            { "rsa_key_size": 64}
   health_check_folder:
     name: Health Checks
     requests:

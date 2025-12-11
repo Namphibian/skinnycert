@@ -1,3 +1,4 @@
+use crate::server::models::repository_errors::{RepositoryError, map_sqlx_error};
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 use sqlx::PgPool;
 use std::error::Error;
@@ -12,38 +13,27 @@ impl RsaKeyRepository {
         Self { pool }
     }
 
-    pub async fn create(
-        &self,
-        display_name: &str,
-        rsa_key_size: i32,
-    ) -> Result<Uuid, Box<dyn Error>> {
-        let mut tx = self.pool.begin().await?;
+    pub async fn create(&self, key_size: i32) -> Result<Option<RSAKeyAlgorithm>, RepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(map_sqlx_error)?;
+
         let rsa_id: Uuid = sqlx::query_scalar(
-            r"
-                    INSERT INTO rsa_key_algorithm
-                    (
-                        algorithm,
-                        rsa_key_size,
-                        display_name
-                    )
-                    VALUES
-                        (
-                            'RSA',
-                            #1::rsa_key_size,
-                            #2::display_name
-                            
-                        );
-                    RETURNING id
-            ",
+            r#"
+            INSERT INTO rsa_key_algorithm (algorithm, key_size)
+            VALUES ('RSA', $1)
+            RETURNING id;
+        "#,
         )
-        .bind(display_name)
-        .bind(rsa_key_size)
+        .bind(key_size)
         .fetch_one(&mut *tx)
-        .await?;
-        tx.commit().await?;
-        Ok(rsa_id)
+        .await
+        .map_err(map_sqlx_error)?;
+
+        tx.commit().await.map_err(map_sqlx_error)?;
+
+        self.find_by_id(rsa_id).await // already returns Option
     }
-    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<RSAKeyAlgorithm>, Box<dyn Error>> {
+
+    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<RSAKeyAlgorithm>, RepositoryError> {
         let result = sqlx::query_as::<_, RSAKeyAlgorithm>(
             r#"
             SELECT * FROM rsa_key_algorithm WHERE id = $1
@@ -51,14 +41,14 @@ impl RsaKeyRepository {
         )
         .bind(id)
         .fetch_optional(&self.pool)
-        .await?;
-
+        .await
+        .map_err(map_sqlx_error)?;
         Ok(result)
     }
     pub async fn find_all(&self) -> Result<Vec<RSAKeyAlgorithm>, Box<dyn Error>> {
         let results = sqlx::query_as::<_, RSAKeyAlgorithm>(
             r#"
-            SELECT * FROM rsa_key_algorithm
+            SELECT * FROM rsa_key_algorithm ORDER BY key_size ASC
             "#,
         )
         .fetch_all(&self.pool)
