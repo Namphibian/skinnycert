@@ -1,10 +1,9 @@
 use crate::server::models::repository_errors::{RepositoryError, map_sqlx_error};
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 use sqlx::PgPool;
-use std::error::Error;
 use uuid::Uuid;
 
-
+#[derive(Debug)]
 pub enum PatchResult<T> {
     Updated(T),
     NotFound,
@@ -19,14 +18,14 @@ impl RsaKeyRepository {
         Self { pool }
     }
 
-    pub async fn create(&self, key_size: i32) -> Result<Option<RSAKeyAlgorithm>, RepositoryError> {
+    pub async fn create(&self, key_size: i32) -> Result<RSAKeyAlgorithm, RepositoryError> {
         let mut tx = self.pool.begin().await.map_err(map_sqlx_error)?;
 
-        let rsa_id: Uuid = sqlx::query_scalar(
+        let rsa_key: RSAKeyAlgorithm = sqlx::query_as::<_, RSAKeyAlgorithm>(
             r#"
             INSERT INTO rsa_key_algorithm (algorithm, key_size)
             VALUES ('RSA', $1)
-            RETURNING id;
+            RETURNING *;
         "#,
         )
         .bind(key_size)
@@ -36,7 +35,7 @@ impl RsaKeyRepository {
 
         tx.commit().await.map_err(map_sqlx_error)?;
 
-        self.find_by_id(rsa_id).await // already returns Option
+        Ok(rsa_key)
     }
 
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<RSAKeyAlgorithm>, RepositoryError> {
@@ -51,15 +50,15 @@ impl RsaKeyRepository {
         .map_err(map_sqlx_error)?;
         Ok(result)
     }
-    pub async fn find_all(&self) -> Result<Vec<RSAKeyAlgorithm>, Box<dyn Error>> {
+    pub async fn find_all(&self) -> Result<Vec<RSAKeyAlgorithm>, RepositoryError> {
         let results = sqlx::query_as::<_, RSAKeyAlgorithm>(
             r#"
             SELECT * FROM rsa_key_algorithm ORDER BY key_size ASC
             "#,
         )
         .fetch_all(&self.pool)
-        .await?;
-
+        .await
+        .map_err(map_sqlx_error)?;
         Ok(results)
     }
     pub async fn patch(
@@ -67,28 +66,29 @@ impl RsaKeyRepository {
         id: Uuid,
         deprecated: bool,
     ) -> Result<PatchResult<RSAKeyAlgorithm>, RepositoryError> {
-        let result = sqlx::query!(
-        r#"
-        UPDATE rsa_key_algorithm
-        SET deprecated = $1
-        WHERE id = $2 AND deprecated <> $1
-        "#,
-        deprecated,
-        id
-    )
-            .execute(&self.pool)
-            .await
-            .map_err(map_sqlx_error)?;
+        let updated = sqlx::query_as::<_, RSAKeyAlgorithm>(
+            r#"
+                UPDATE rsa_key_algorithm
+                SET deprecated = $1
+                WHERE id = $2 AND deprecated <> $1
+                RETURNING *
+            "#,
+        )
+        .bind(deprecated)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(map_sqlx_error)?;
 
-        if result.rows_affected() == 0 {
-            // Check if the row exists at all
-            match self.find_by_id(id).await? {
-                Some(_) => return Ok(PatchResult::NotModified),
-                None => return Ok(PatchResult::NotFound),
+        match updated {
+            Some(model) => Ok(PatchResult::Updated(model)),
+            None => {
+                // Either not found or not modified
+                match self.find_by_id(id).await? {
+                    Some(_) => Ok(PatchResult::NotModified),
+                    None => Ok(PatchResult::NotFound),
+                }
             }
         }
-
-        let updated = self.find_by_id(id).await?.unwrap();
-        Ok(PatchResult::Updated(updated))
     }
 }
