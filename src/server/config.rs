@@ -1,14 +1,15 @@
+use crate::server::logger::configure_bunyan_logger_format;
 use dotenvy::dotenv;
+use openssl::rand::rand_bytes;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::fmt;
 use std::io::Stdout;
 use std::net::{IpAddr, Ipv4Addr, TcpListener};
 use std::thread::available_parallelism;
+use tracing::dispatcher;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
-use tracing::dispatcher;
-use crate::server::logger::configure_bunyan_logger_format;
 const DEFAULT_PORT: u16 = 8080;
 const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;
 
@@ -104,7 +105,11 @@ fn bind_listener(addr_str: &str, port: u16) -> Result<TcpListener, std::io::Erro
         format!("Address '{}' is neither valid IPv4 nor IPv6", addr_str),
     ))
 }
-
+fn check_rng() -> Result<(), Box<dyn std::error::Error>> {
+    let mut buf = [0u8; 16];
+    rand_bytes(&mut buf)?;
+    Ok(())
+}
 /// Configure Skinnycert environment, optionally using the provided address and port.
 /// If parameters are Empty, falls back to `.env` values or defaults.
 pub async fn configure_environment(
@@ -116,8 +121,6 @@ pub async fn configure_environment(
     let _ = dotenv();
 
     // --- Configure logging ---
-
-
     let log_level = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let formatting_layer: BunyanFormattingLayer<fn() -> Stdout> = configure_bunyan_logger_format();
     if !dispatcher::has_been_set() {
@@ -129,8 +132,12 @@ pub async fn configure_environment(
         set_global_default(subscriber).expect("Failed to set tracing subscriber");
     }
 
-    tracing::info!("Logger initialised; reading configuration from environment.");
-
+    tracing::info!("Logger initialised; starting configuration of environment.");
+    check_rng().unwrap_or_else(|e| {
+        tracing::error!("RNG check failed: {}", e);
+        panic!("OpenSSL failed to generate random bytes, environment is not secured for cryptography applications.");
+    });
+    tracing::info!("Environment reported secure openssl random bytes.");
     // --- Resolve server port ---
     let mut resolved_port: u16 = match server_port {
         ServerPort::Is(p) => p,
