@@ -1,3 +1,7 @@
+//! This module provides the `PatchResult` enum and the `RsaKeyRepository` struct for interacting
+//! with a PostgreSQL database to manage RSA key algorithms. It includes functionality such as
+//! creating, finding, updating, and deleting RSA key entries. Additionally, it provides an enum
+//! to indicate the outcome of patch operations.
 use crate::server::models::repository_errors::{RepositoryError, map_sqlx_error};
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 use sqlx::PgPool;
