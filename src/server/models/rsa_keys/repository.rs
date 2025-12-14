@@ -91,4 +91,18 @@ impl RsaKeyRepository {
             }
         }
     }
+    pub async fn delete(&self, id: Uuid) -> Result<Option<RSAKeyAlgorithm>, RepositoryError> {
+        let deleted = sqlx::query_as::<_, RSAKeyAlgorithm>(
+            r#"
+                DELETE FROM rsa_key_algorithm
+                WHERE id = $1 
+                RETURNING *
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(map_sqlx_error)?;
+        Ok(deleted)
+    }
 }

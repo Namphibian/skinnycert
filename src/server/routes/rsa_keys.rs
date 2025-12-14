@@ -1,10 +1,12 @@
 mod handler;
-mod dto;
+pub mod dto;
 
 use actix_web::web;
 
 const PATH: &str = "/keys/rsa";
-const PATH_WITH_ID: &str = "/keys/rsa/{id}";
+const PATH_WITH_ID: &str = concat!("/keys/rsa/{id}");
+const PATH_WITH_ID_KEYPAIR: &str = concat!("/keys/rsa/{id}/keypair");
+
 pub fn configure_rsa_key_route(cfg: &mut web::ServiceConfig) {
     cfg.route(PATH, web::get().to(handler::get_handler));
     cfg.route(PATH_WITH_ID, web::get().to(handler::get_by_id_handler));

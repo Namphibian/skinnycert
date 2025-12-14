@@ -37,7 +37,7 @@ impl RSAKeyAlgorithm {
         let private_key = PKey::private_key_from_pem(private_key_pem.as_bytes())?;
         let public_key = PKey::public_key_from_pem(public_key_pem.as_bytes())?;
         // Sign some data with the private key
-        let data = b"hello world";
+        let data = b"Validate the hash of this string by using the public key";
         let mut signer = Signer::new(MessageDigest::sha256(), &private_key)?;
         signer.update(data)?;
         let signature = signer.sign_to_vec()?;

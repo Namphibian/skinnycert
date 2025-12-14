@@ -261,8 +261,13 @@ pub fn validate_key_pair(
     let extracted_public = extract_public_key_from_private_key(private_key_pem)?;
 
     // Normalize whitespace for comparison
-    let extracted_normalized = extracted_public.replace("\r\n", "\n").trim().to_string();
-    let provided_normalized = public_key_pem.replace("\r\n", "\n").trim().to_string();
+    let extracted_normalized = extracted_public.replace("\r\n", "\n")
+        .trim()
+        .to_string();
+
+    let provided_normalized = public_key_pem.replace("\r\n", "\n")
+        .trim()
+        .to_string();
 
     Ok(extracted_normalized == provided_normalized)
 }
@@ -270,7 +275,9 @@ pub fn validate_key_pair(
 /// Converts ASN1Time to chrono DateTime<Utc>
 pub fn asn1time_to_datetime(time: &ASN1Time) -> Result<DateTime<Utc>, Box<dyn Error>> {
     let timestamp = time.timestamp();
-    DateTime::<Utc>::from_timestamp(timestamp, 0).ok_or_else(|| "Invalid timestamp".into())
+
+    DateTime::<Utc>::from_timestamp(timestamp, 0)
+        .ok_or_else(|| "Invalid timestamp".into())
 }
 
 /// Extract validity period from a PEM-encoded certificate
