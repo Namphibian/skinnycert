@@ -1,80 +1,3 @@
-//! Maps an `sqlx::Error` to a custom `RepositoryError`.
-//!
-//! This function is used to translate a generic database or SQL error encountered during
-//! database operations into a more detailed and structured `RepositoryError` representation.
-//!
-//! The function inspects the type and code of the provided `sqlx::Error` and, when applicable,
-//! parses PostgreSQL-specific error codes and details (such as constraint names, column names,
-//! or table names). The resulting `RepositoryError` encapsulates this information for better
-//! error handling and debugging.
-//!
-//! # Parameters
-//!
-//! - `e`: A value of type `sqlx::Error` representing the original error encountered during database
-//!   operation.
-//!
-//! # Returns
-//!
-//! - A `RepositoryError` representing the mapped error with specifics of the cause, if available.
-//!
-//! # Behavior
-//!
-//! The function handles errors based on the following rules:
-//!
-//! - If the error is a database-related error (`sqlx::Error::Database`), it attempts to downcast it
-//!   to a `PgDatabaseError` to extract PostgreSQL-specific error codes and additional details.
-//! - Based on the error code from PostgreSQL, a corresponding `RepositoryError` variant is created.
-//! - If the error code is not recognized, or in cases where downcasting fails, a generic `Database`
-//!   error is returned with the underlying error message.
-//! - For non-database errors, the function wraps the error message in a `RepositoryError::Database`
-//!   variant.
-//!
-//! # PostgreSQL Error Codes Mapped:
-//!
-//! - `23505` → `RepositoryError::UniqueViolation`
-//! - `23503` → `RepositoryError::ForeignKeyViolation`
-//! - `23502` → `RepositoryError::NotNullViolation`
-//! - `23514` → `RepositoryError::CheckViolation`
-//! - `22001` → `RepositoryError::StringTooLong`
-//! - `22003` → `RepositoryError::NumericOutOfRange`
-//! - `22007` → `RepositoryError::InvalidDatetime`
-//! - `42601` → `RepositoryError::SyntaxError`
-//! - `42703` → `RepositoryError::UndefinedColumn`
-//! - `42P01` → `RepositoryError::UndefinedTable`
-//! - `40001` → `RepositoryError::SerializationFailure`
-//! - `57014` → `RepositoryError::QueryCanceled`
-//! - `40P01` → `RepositoryError::DeadlockDetected`
-//! - `42501` → `RepositoryError::InsufficientPrivilege`
-//!
-//! For unknown PostgreSQL-specific errors, a generic `RepositoryError::Database` is returned with
-//! the error message.
-//!
-//! # Examples
-//!
-//! ```rust
-//! use sqlx::Error;
-//! use crate::{map_sqlx_error, RepositoryError};
-//!
-//! fn process_error(e: sqlx::Error) -> RepositoryError {
-//!     map_sqlx_error(e)
-//! }
-//!
-//! let error = sqlx::Error::RowNotFound;
-//! let mapped_error = process_error(error);
-//!
-//! match mapped_error {
-//!     RepositoryError::Database { message } => {
-//!         println!("Database error: {}", message);
-//!     },
-//!     _ => println!("Other error"),
-//! }
-//! ```
-//!
-//! # Notes
-//!
-//! - The function is intended to simplify error handling and provide domain-specific error types
-//!   in a PostgreSQL-backed application.
-//! - This implementation depends on the `sqlx` and `thiserror` crates.
 use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
 /// An enumeration representing potential errors that can occur in a repository layer.
@@ -220,7 +143,83 @@ pub enum RepositoryError {
     #[error("Transaction error: {message}")]
     Transaction { message: String },
 }
-
+/// Maps an `sqlx::Error` to a custom `RepositoryError`.
+///
+/// This function is used to translate a generic database or SQL error encountered during
+/// database operations into a more detailed and structured `RepositoryError` representation.
+///
+/// The function inspects the type and code of the provided `sqlx::Error` and, when applicable,
+/// parses PostgreSQL-specific error codes and details (such as constraint names, column names,
+/// or table names). The resulting `RepositoryError` encapsulates this information for better
+/// error handling and debugging.
+///
+/// # Parameters
+///
+/// - `e`: A value of type `sqlx::Error` representing the original error encountered during database
+///   operation.
+///
+/// # Returns
+///
+/// - A `RepositoryError` representing the mapped error with specifics of the cause, if available.
+///
+/// # Behavior
+///
+/// The function handles errors based on the following rules:
+///
+/// - If the error is a database-related error (`sqlx::Error::Database`), it attempts to downcast it
+///   to a `PgDatabaseError` to extract PostgreSQL-specific error codes and additional details.
+/// - Based on the error code from PostgreSQL, a corresponding `RepositoryError` variant is created.
+/// - If the error code is not recognized, or in cases where downcasting fails, a generic `Database`
+///   error is returned with the underlying error message.
+/// - For non-database errors, the function wraps the error message in a `RepositoryError::Database`
+///   variant.
+///
+/// # PostgreSQL Error Codes Mapped:
+///
+/// - `23505` → `RepositoryError::UniqueViolation`
+/// - `23503` → `RepositoryError::ForeignKeyViolation`
+/// - `23502` → `RepositoryError::NotNullViolation`
+/// - `23514` → `RepositoryError::CheckViolation`
+/// - `22001` → `RepositoryError::StringTooLong`
+/// - `22003` → `RepositoryError::NumericOutOfRange`
+/// - `22007` → `RepositoryError::InvalidDatetime`
+/// - `42601` → `RepositoryError::SyntaxError`
+/// - `42703` → `RepositoryError::UndefinedColumn`
+/// - `42P01` → `RepositoryError::UndefinedTable`
+/// - `40001` → `RepositoryError::SerializationFailure`
+/// - `57014` → `RepositoryError::QueryCanceled`
+/// - `40P01` → `RepositoryError::DeadlockDetected`
+/// - `42501` → `RepositoryError::InsufficientPrivilege`
+///
+/// For unknown PostgreSQL-specific errors, a generic `RepositoryError::Database` is returned with
+/// the error message.
+///
+/// # Examples
+///
+/// ```rust
+/// use sqlx::Error;
+/// use crate::{map_sqlx_error, RepositoryError};
+///
+/// fn process_error(e: sqlx::Error) -> RepositoryError {
+///     map_sqlx_error(e)
+/// }
+///
+/// let error = sqlx::Error::RowNotFound;
+/// let mapped_error = process_error(error);
+///
+/// match mapped_error {
+///     RepositoryError::Database { message } => {
+///         println!("Database error: {}", message);
+///     },
+///     _ => println!("Other error"),
+/// }
+/// ```
+///
+/// # Notes
+///
+/// - The function is intended to simplify error handling and provide domain-specific error types
+///   in a PostgreSQL-backed application.
+/// - This implementation depends on the `sqlx` and `thiserror` crates.
 pub fn map_sqlx_error(e: sqlx::Error) -> RepositoryError {
     if let sqlx::Error::Database(db_err) = &e {
         if let Some(pg_err) = db_err.try_downcast_ref::<PgDatabaseError>() {
