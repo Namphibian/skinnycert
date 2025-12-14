@@ -1,6 +1,175 @@
-
+//! Maps an `sqlx::Error` to a custom `RepositoryError`.
+//!
+//! This function is used to translate a generic database or SQL error encountered during
+//! database operations into a more detailed and structured `RepositoryError` representation.
+//!
+//! The function inspects the type and code of the provided `sqlx::Error` and, when applicable,
+//! parses PostgreSQL-specific error codes and details (such as constraint names, column names,
+//! or table names). The resulting `RepositoryError` encapsulates this information for better
+//! error handling and debugging.
+//!
+//! # Parameters
+//!
+//! - `e`: A value of type `sqlx::Error` representing the original error encountered during database
+//!   operation.
+//!
+//! # Returns
+//!
+//! - A `RepositoryError` representing the mapped error with specifics of the cause, if available.
+//!
+//! # Behavior
+//!
+//! The function handles errors based on the following rules:
+//!
+//! - If the error is a database-related error (`sqlx::Error::Database`), it attempts to downcast it
+//!   to a `PgDatabaseError` to extract PostgreSQL-specific error codes and additional details.
+//! - Based on the error code from PostgreSQL, a corresponding `RepositoryError` variant is created.
+//! - If the error code is not recognized, or in cases where downcasting fails, a generic `Database`
+//!   error is returned with the underlying error message.
+//! - For non-database errors, the function wraps the error message in a `RepositoryError::Database`
+//!   variant.
+//!
+//! # PostgreSQL Error Codes Mapped:
+//!
+//! - `23505` → `RepositoryError::UniqueViolation`
+//! - `23503` → `RepositoryError::ForeignKeyViolation`
+//! - `23502` → `RepositoryError::NotNullViolation`
+//! - `23514` → `RepositoryError::CheckViolation`
+//! - `22001` → `RepositoryError::StringTooLong`
+//! - `22003` → `RepositoryError::NumericOutOfRange`
+//! - `22007` → `RepositoryError::InvalidDatetime`
+//! - `42601` → `RepositoryError::SyntaxError`
+//! - `42703` → `RepositoryError::UndefinedColumn`
+//! - `42P01` → `RepositoryError::UndefinedTable`
+//! - `40001` → `RepositoryError::SerializationFailure`
+//! - `57014` → `RepositoryError::QueryCanceled`
+//! - `40P01` → `RepositoryError::DeadlockDetected`
+//! - `42501` → `RepositoryError::InsufficientPrivilege`
+//!
+//! For unknown PostgreSQL-specific errors, a generic `RepositoryError::Database` is returned with
+//! the error message.
+//!
+//! # Examples
+//!
+//! ```rust
+//! use sqlx::Error;
+//! use crate::{map_sqlx_error, RepositoryError};
+//!
+//! fn process_error(e: sqlx::Error) -> RepositoryError {
+//!     map_sqlx_error(e)
+//! }
+//!
+//! let error = sqlx::Error::RowNotFound;
+//! let mapped_error = process_error(error);
+//!
+//! match mapped_error {
+//!     RepositoryError::Database { message } => {
+//!         println!("Database error: {}", message);
+//!     },
+//!     _ => println!("Other error"),
+//! }
+//! ```
+//!
+//! # Notes
+//!
+//! - The function is intended to simplify error handling and provide domain-specific error types
+//!   in a PostgreSQL-backed application.
+//! - This implementation depends on the `sqlx` and `thiserror` crates.
 use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
+/// An enumeration representing potential errors that can occur in a repository layer.
+///
+/// This enum encapsulates various types of database and SQL-related errors, providing
+/// detailed information about specific issues encountered during data operations.
+///
+/// # Variants
+///
+/// - `UniqueViolation`
+///   - Errors related to unique constraint violations on a specified constraint.
+///   - Fields:
+///     - `constraint` - The name of the unique constraint that was violated.
+///
+/// - `ForeignKeyViolation`
+///   - Errors caused by foreign key constraint violations on a specified constraint.
+///   - Fields:
+///     - `constraint` - The name of the foreign key constraint that was violated.
+///
+/// - `NotNullViolation`
+///   - Errors related to a violation of a NOT NULL constraint on a specific column.
+///   - Fields:
+///     - `column` - The name of the column for which the NOT NULL constraint was violated.
+///
+/// - `CheckViolation`
+///   - Errors linked to check constraint violations on a specified constraint.
+///   - Fields:
+///     - `constraint` - The name of the check constraint that was violated.
+///
+/// - `StringTooLong`
+///   - Errors occurring when the string length exceeds the maximum length for a column.
+///   - Fields:
+///     - `column` - The name of the column where the string was too long.
+///
+/// - `NumericOutOfRange`
+///   - Errors involving numeric values that are out of range for the specified type.
+///
+/// - `InvalidDatetime`
+///   - Errors arising from invalid datetime formats during parsing or validation.
+///
+/// - `SyntaxError`
+///   - SQL syntax errors encountered in a query.
+///
+/// - `UndefinedColumn`
+///   - Errors caused by the use of an undefined column in a query.
+///   - Fields:
+///     - `column` - The name of the undefined column.
+///
+/// - `UndefinedTable`
+///   - Errors triggered by reference to a non-existent table in a query.
+///   - Fields:
+///     - `table` - The name of the undefined table.
+///
+/// - `SerializationFailure`
+///   - Errors related to concurrent transaction conflicts, typically caused by serialization failures.
+///
+/// - `QueryCanceled`
+///   - Errors occurring when a query is canceled due to a timeout or a manual cancellation.
+///
+/// - `DeadlockDetected`
+///   - Errors resulting from the detection of a deadlock situation during transactional operations.
+///
+/// - `InsufficientPrivilege`
+///   - Errors triggered by insufficient privileges to perform an operation on a database resource.
+///
+/// - `Database`
+///   - A generic error representing other database-related issues.
+///   - Fields:
+///     - `message` - Additional details about the database error.
+///
+/// - `Transaction`
+///   - Errors specifically related to transactional failures.
+///   - Fields:
+///     - `message` - Additional details about the transaction error.
+///
+/// # Examples
+///
+/// ```rust
+/// use thiserror::Error;
+/// use crate::RepositoryError;
+///
+/// fn simulate_error() -> Result<(), RepositoryError> {
+///     Err(RepositoryError::UniqueViolation {
+///         constraint: "users_email_key".to_string(),
+///     })
+/// }
+///
+/// match simulate_error() {
+///     Ok(_) => println!("Operation succeeded"),
+///     Err(e) => println!("Error occurred: {}", e),
+/// }
+/// ```
+///
+/// This struct leverages the `thiserror` crate for deriving the `Error` implementation, making
+/// it compatible with standard Rust error handling schemes.
 #[derive(Debug, Error)]
 pub enum RepositoryError {
     #[error("Unique constraint violation on {constraint}")]
