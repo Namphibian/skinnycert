@@ -38,6 +38,7 @@ uuid = { version = "1.18.1", features = ["v4","serde"] }
 sqlx-cli = "0.8.6"
 sha2 = "0.10.9"
 thiserror = "2.0.17"
+futures = "0.3.31"
 [dependencies.sqlx]
 version = "0.8.6"
 default-features = false
