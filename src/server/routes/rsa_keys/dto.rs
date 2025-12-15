@@ -26,6 +26,12 @@ pub struct RsaKeyAlgorithmPatchRequest {
     pub deprecated: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RsaKeyPairResponse {
+    pub public_key: String,
+    pub private_key: String,
+}
+
 impl TryFrom<RSAKeyAlgorithm> for RsaKeyAlgorithmResponse {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 

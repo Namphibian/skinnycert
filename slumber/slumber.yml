@@ -45,6 +45,10 @@ requests:
           type: json
           data:
             { "deprecated": true }
+      generate_key_pair:
+        name: Generate a key pair.
+        method: GET
+        url: "{{ host }}/keys/rsa/b277f798-481a-40ce-8a55-c1616262cfe5/keypair"
   health_check_folder:
     name: Health Checks
     requests:

@@ -60,8 +60,10 @@
 //!   The wrapped `Uuid` value extracted from the path parameter.
 use actix_web::{FromRequest, HttpRequest};
 use futures::future::{ready, Ready};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PathUuid(pub Uuid);
 
 impl FromRequest for PathUuid {
