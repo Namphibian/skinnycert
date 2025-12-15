@@ -1,7 +1,4 @@
-//! This module provides the `PatchResult` enum and the `RsaKeyRepository` struct for interacting
-//! with a PostgreSQL database to manage RSA key algorithms. It includes functionality such as
-//! creating, finding, updating, and deleting RSA key entries. Additionally, it provides an enum
-//! to indicate the outcome of patch operations.
+//! A module for managing RSA key algorithms in a PostgreSQL database.
 use crate::server::models::repository_errors::{RepositoryError, map_sqlx_error};
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 use sqlx::PgPool;
@@ -137,7 +134,9 @@ impl RsaKeyRepository {
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<RSAKeyAlgorithm>, RepositoryError> {
         let result = sqlx::query_as::<_, RSAKeyAlgorithm>(
             r#"
-            SELECT * FROM rsa_key_algorithm WHERE id = $1
+            SELECT *
+            FROM rsa_key_algorithm
+            WHERE id = $1
             "#,
         )
         .bind(id)
@@ -149,7 +148,9 @@ impl RsaKeyRepository {
     pub async fn find_all(&self) -> Result<Vec<RSAKeyAlgorithm>, RepositoryError> {
         let results = sqlx::query_as::<_, RSAKeyAlgorithm>(
             r#"
-            SELECT * FROM rsa_key_algorithm ORDER BY key_size ASC
+            SELECT *
+            FROM rsa_key_algorithm
+            ORDER BY key_size ASC
             "#,
         )
         .fetch_all(&self.pool)
@@ -157,6 +158,7 @@ impl RsaKeyRepository {
         .map_err(map_sqlx_error)?;
         Ok(results)
     }
+
     pub async fn patch(
         &self,
         id: Uuid,
@@ -166,7 +168,8 @@ impl RsaKeyRepository {
             r#"
                 UPDATE rsa_key_algorithm
                 SET deprecated = $1
-                WHERE id = $2 AND deprecated <> $1
+                WHERE id = $2
+                  AND deprecated <> $1
                 RETURNING *
             "#,
         )
@@ -190,7 +193,8 @@ impl RsaKeyRepository {
     pub async fn delete(&self, id: Uuid) -> Result<Option<RSAKeyAlgorithm>, RepositoryError> {
         let deleted = sqlx::query_as::<_, RSAKeyAlgorithm>(
             r#"
-                DELETE FROM rsa_key_algorithm
+                DELETE
+                FROM rsa_key_algorithm
                 WHERE id = $1 
                 RETURNING *
             "#,

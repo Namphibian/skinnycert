@@ -126,7 +126,20 @@ pub fn to_create_response(result: Result<RSAKeyAlgorithm, RepositoryError>) -> H
     }
 }
 
-
+pub fn to_delete_response(result: Result<Option<RSAKeyAlgorithm>, RepositoryError>) -> HttpResponse {
+    match result {
+        Ok(Some(_)) => HttpResponse::NoContent().finish(),
+        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
+            "error": "RSA Key not found"
+        })),
+        Err(e) => {
+            tracing::error!(error = %e, context = "to_delete_response", "Repository error while deleting RSA key");
+            HttpResponse::build(e.status_code()).json(serde_json::json!({
+                "error": e.to_string()
+            }))
+        }
+    }
+}
 fn map_model(model: RSAKeyAlgorithm) -> HttpResponse {
     match RsaKeyAlgorithmResponse::try_from(model) {
         Ok(dto) => HttpResponse::Ok().json(dto),

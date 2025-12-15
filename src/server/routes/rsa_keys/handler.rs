@@ -1,5 +1,5 @@
 use crate::server::models::rsa_keys::repository::RsaKeyRepository;
-use crate::server::routes::rsa_keys::dto::{NewRsaKeyAlgorithmRequest, to_response, to_response_list, RsaKeyAlgorithmPatchRequest, to_patch_response, to_create_response};
+use crate::server::routes::rsa_keys::dto::{NewRsaKeyAlgorithmRequest, RsaKeyAlgorithmPatchRequest, to_create_response, to_patch_response, to_response, to_response_list, to_delete_response};
 use actix_web::{HttpResponse, Responder, web};
 use uuid::Uuid;
 
@@ -50,7 +50,6 @@ pub async fn patch_handler(
     id: web::Path<String>,
     payload: web::Json<RsaKeyAlgorithmPatchRequest>,
 ) -> impl Responder {
-
     let rsa_key_id = match Uuid::parse_str(&id.into_inner()) {
         Ok(uuid) => uuid,
         Err(_) => {
@@ -64,10 +63,19 @@ pub async fn patch_handler(
     to_patch_response(repo.patch(rsa_key_id, dto.deprecated).await)
 }
 
-#[tracing::instrument(name = "Delete RSAKeys", skip(_pool))]
-pub async fn delete_handler(_pool: web::Data<sqlx::PgPool>) -> impl Responder {
-    return HttpResponse::NotImplemented().json(serde_json::json!({
-        "error": "Cannot Update RSA Key Algorithm",
-        "message": "RSA Key Algorithms cannot be updated."
-    }));
+#[tracing::instrument(name = "Delete RSAKeys", skip(pool))]
+pub async fn delete_handler(
+    pool: web::Data<sqlx::PgPool>,
+    id: web::Path<String>,
+) -> impl Responder {
+    let rsa_key_id = match Uuid::parse_str(&id.into_inner()) {
+        Ok(uuid) => uuid,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(serde_json::json!({
+                "error": "Invalid UUID format"
+            }));
+        }
+    };
+    let repo = RsaKeyRepository::new(pool.get_ref().clone());
+    to_delete_response(repo.delete(rsa_key_id).await)
 }
