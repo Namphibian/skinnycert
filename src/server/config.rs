@@ -10,6 +10,8 @@ use tracing::dispatcher;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
+use crate::server::models::ecdsa_keys::openssl::configure_default_ecdsa_algorithm;
+
 const DEFAULT_PORT: u16 = 8080;
 const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;
 
@@ -109,7 +111,7 @@ fn bind_listener(addr_str: &str, port: u16) -> Result<TcpListener, std::io::Erro
 ///
 /// This function attempts to fill a buffer with 16 random bytes using the openssl `rand_bytes` function.
 /// This is to make sure that the environment is secure for cryptographic applications.
-/// 
+///
 /// # Returns
 ///
 /// * `Ok(())` - If random bytes are successfully generated and the buffer is filled.
@@ -129,11 +131,13 @@ fn bind_listener(addr_str: &str, port: u16) -> Result<TcpListener, std::io::Erro
 /// }
 /// ```
 fn check_rng() -> Result<(), Box<dyn std::error::Error>> {
-    
+    tracing::info!("Checking OpenSSL random bytes...");
     let mut buf = [0u8; 16];
     rand_bytes(&mut buf)?;
     Ok(())
 }
+
+
 /// Configure Skinnycert environment, optionally using the provided address and port.
 /// If parameters are Empty, falls back to `.env` values or defaults.
 pub async fn configure_environment(
@@ -204,7 +208,9 @@ pub async fn configure_environment(
 
     // --- Configure database connection ---
     let db_pool = configure_database().await?;
-
+    configure_default_ecdsa_algorithm(&db_pool)
+        .await
+        .expect("Failed to configure ECDSA algorithms");
     // --- Bind the listener (IPv6 first, fallback to IPv4) ---
     let listener = bind_listener(&resolved_address.to_string(), resolved_port)
         .map_err(|e| format!("Failed to bind listener: {}", e))?;
