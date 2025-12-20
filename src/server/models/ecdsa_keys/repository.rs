@@ -1,9 +1,9 @@
 use crate::server::models::ecdsa_keys::db::EcdsaKeyAlgorithm;
-use crate::server::models::repository_errors::{RepositoryError, map_sqlx_error};
+use crate::server::models::responses::{RepositoryError, map_sqlx_error, PatchResult};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::server::models::rsa_keys::repository::{PatchResult, RsaKeyRepository};
+
 
 pub struct EcdsaKeyRepository {
     pool: PgPool,

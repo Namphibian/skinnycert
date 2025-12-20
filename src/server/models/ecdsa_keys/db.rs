@@ -6,7 +6,7 @@ use uuid::Uuid;
 pub struct EcdsaKeyAlgorithm {
     pub id: Uuid,
     pub algorithm: String,
-    pub nid_name: String,
+    pub display_name: String,
     pub nid_value: i32,
     pub curve_size: i32,
     pub deprecated: bool,

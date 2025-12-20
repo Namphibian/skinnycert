@@ -118,13 +118,6 @@ pub async fn configure_default_ecdsa_algorithm(pool: &PgPool) -> Result<(), sqlx
         let display_name = comment.clone();
         let curve_size = extract_curve_size(&comment).unwrap_or(0);
 
-        tracing::info!(
-            "Ensuring ECDSA curve nid={} size={} ({}) exists",
-            nid_value,
-            curve_size,
-            display_name
-        );
-
         sqlx::query!(
             r#"
             INSERT INTO ecdsa_key_algorithm (algorithm, nid_value, display_name, curve_size)

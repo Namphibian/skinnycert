@@ -1,9 +1,7 @@
-use std::ffi::{c_char, c_int};
 use clap::Parser;
 use skinnycert::server::app::run;
 use skinnycert::server::config::{ServerListeningAddress, ServerPort, configure_environment};
 use std::net::IpAddr;
-use skinnycert::server::models::ecdsa_keys::openssl::builtin_curves;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

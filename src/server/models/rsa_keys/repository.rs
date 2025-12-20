@@ -1,46 +1,10 @@
 //! A module for managing RSA key algorithms in a PostgreSQL database.
-use crate::server::models::repository_errors::{RepositoryError, map_sqlx_error};
+use crate::server::models::responses::{RepositoryError, map_sqlx_error, PatchResult};
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-/// Represents the result of a patch operation, indicating whether an item was updated,
-/// not found, or not modified.
-///
-/// # Variants
-///
-/// - `Updated(T)`:
-///   The patch operation was successful and resulted in an updated value of type `T`.
-///
-/// - `NotFound`:
-///   The patch operation could not proceed because the target item was not found.
-///
-/// - `NotModified`:
-///   The patch operation was unnecessary as the target item was already up-to-date.
-///
-/// # Type Parameters
-///
-/// - `T`: The type of the updated item contained in the `Updated` variant.
-///
-/// # Examples
-///
-/// ```
-/// use your_crate::PatchResult;
-///
-/// let result: PatchResult<String> = PatchResult::Updated(String::from("UpdatedValue"));
-///
-/// match result {
-///     PatchResult::Updated(value) => println!("Successfully updated: {}", value),
-///     PatchResult::NotFound => println!("Item not found."),
-///     PatchResult::NotModified => println!("No modification needed."),
-/// }
-/// ```
-#[derive(Debug)]
-pub enum PatchResult<T> {
-    Updated(T),
-    NotFound,
-    NotModified,
-}
+
 /// A repository for handling RSA keys, backed by a PostgreSQL database.
 ///
 /// The `RsaKeyRepository` is responsible for managing storage and retrieval

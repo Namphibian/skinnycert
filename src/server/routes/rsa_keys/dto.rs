@@ -1,6 +1,6 @@
-use crate::server::models::repository_errors::RepositoryError;
+use crate::server::models::responses::{PatchResult, RepositoryError};
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
-use crate::server::models::rsa_keys::repository::PatchResult;
+
 use actix_web::{HttpResponse, ResponseError};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -36,15 +36,15 @@ impl TryFrom<RSAKeyAlgorithm> for RsaKeyAlgorithmResponse {
     type Error = Box<dyn std::error::Error + Send + Sync>;
 
 
-    fn try_from(db_rsa_key: RSAKeyAlgorithm) -> Result<Self, Self::Error> {
+    fn try_from(value: RSAKeyAlgorithm) -> Result<Self, Self::Error> {
         Ok(Self {
-            id: db_rsa_key.id,
-            display_name: db_rsa_key.display_name,
-            algorithm: db_rsa_key.algorithm,
-            key_size: db_rsa_key.key_size,
-            deprecated: db_rsa_key.deprecated,
-            created_on: db_rsa_key.created_on,
-            updated_on: db_rsa_key.updated_on,
+            id: value.id,
+            display_name: value.display_name,
+            algorithm: value.algorithm,
+            key_size: value.key_size,
+            deprecated: value.deprecated,
+            created_on: value.created_on,
+            updated_on: value.updated_on,
         })
     }
 }
