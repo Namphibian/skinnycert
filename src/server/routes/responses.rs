@@ -51,3 +51,89 @@ impl ResponseError for RepositoryError {
         HttpResponse::build(self.status_code()).json(body)
     }
 }
+pub fn to_response_list<M, D, E>(
+    result: Result<Vec<M>, E>
+) -> HttpResponse
+where
+    D: TryFrom<M>+ serde::Serialize,
+    D::Error: std::fmt::Display,
+    E: Into<RepositoryError> + std::fmt::Display,
+{
+    match result {
+        Ok(models) => {
+            let dtos: Result<Vec<_>, _> =
+                models.into_iter().map(D::try_from).collect();
+
+            match dtos {
+                Ok(valid) => HttpResponse::Ok().json(valid),
+                Err(e) => {
+                    tracing::error!(
+                        error = %e,
+                        context = "to_response_list",
+                        "Conversion failed for list"
+                    );
+                    HttpResponse::InternalServerError().json(serde_json::json!({
+                        "error": "Invalid format",
+                        "message": e.to_string()
+                    }))
+                }
+            }
+        }
+        Err(e) => {
+            let err: RepositoryError = e.into();
+            tracing::error!(
+                error = %err,
+                context = "to_response_list",
+                "Repository error while fetching list"
+            );
+            HttpResponse::build(err.status_code()).json(serde_json::json!({
+                "error": err.to_string()
+            }))
+        }
+    }
+}
+
+
+pub fn to_response<M, D, E>(
+    result: Result<Option<M>, E>
+) -> HttpResponse
+where
+    D: TryFrom<M> + serde::Serialize,
+    D::Error: std::fmt::Display,
+    E: Into<RepositoryError> + std::fmt::Display,
+{
+    match result {
+        Ok(Some(model)) => {
+            match D::try_from(model) {
+                Ok(dto) => HttpResponse::Ok().json(dto),
+                Err(e) => {
+                    tracing::error!(
+                        error = %e,
+                        context = "to_response/single",
+                        "DTO conversion failed"
+                    );
+                    HttpResponse::InternalServerError().json(serde_json::json!({
+                        "error": "Invalid format",
+                        "message": e.to_string()
+                    }))
+                }
+            }
+        }
+
+        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
+            "error": "Not found"
+        })),
+
+        Err(e) => {
+            let err: RepositoryError = e.into();
+            tracing::error!(
+                error = %err,
+                context = "to_response/single",
+                "Repository error"
+            );
+            HttpResponse::build(err.status_code()).json(serde_json::json!({
+                "error": err.to_string()
+            }))
+        }
+    }
+}

@@ -1,22 +1,27 @@
 use crate::server::models::rsa_keys::repository::RsaKeyRepository;
 use crate::server::routes::extractors::PathUuid;
-use crate::server::routes::rsa_keys::dto::{NewRsaKeyAlgorithmRequest, RsaKeyAlgorithmPatchRequest, to_create_response, to_delete_response, to_patch_response, to_response, to_response_list, RsaKeyPairResponse};
-use actix_web::{HttpResponse, Responder, web, ResponseError};
+use crate::server::routes::responses::{to_response, to_response_list};
+use crate::server::routes::rsa_keys::dto::{NewRsaKeyAlgorithmRequest, RsaKeyAlgorithmPatchRequest, RsaKeyPairResponse, to_create_response, to_delete_response, to_patch_response, RsaKeyAlgorithmResponse};
+use actix_web::{HttpResponse, Responder, ResponseError, web};
 use base64;
 use base64::Engine;
 use base64::engine::general_purpose;
 use openssl::rsa::Rsa;
+use crate::server::models::responses::RepositoryError;
+use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 
 #[tracing::instrument(name = "Get All RSAKeys", skip(pool))]
 pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
     let repo = RsaKeyRepository::new(pool.get_ref().clone());
-    to_response_list(repo.find_all().await)
+    to_response_list::<RSAKeyAlgorithm, RsaKeyAlgorithmResponse, RepositoryError>(
+        repo.find_all().await,
+    )
 }
 
 #[tracing::instrument(name = "Create RSAKey Algorithm", skip(pool))]
 pub async fn get_by_id_handler(pool: web::Data<sqlx::PgPool>, id: PathUuid) -> impl Responder {
     let repo = RsaKeyRepository::new(pool.get_ref().clone());
-    to_response(repo.find_by_id(id.0).await)
+    to_response::<RSAKeyAlgorithm, RsaKeyAlgorithmResponse, RepositoryError>(repo.find_by_id(id.0).await)
 }
 
 #[tracing::instrument(name = "Create RSAKey Algorithm", skip(pool, payload))]
@@ -59,8 +64,6 @@ pub async fn delete_handler(pool: web::Data<sqlx::PgPool>, id: PathUuid) -> impl
     to_delete_response(repo.delete(id.0).await)
 }
 
-
-
 #[tracing::instrument(name = "Generate RSA Key Pair", skip(pool))]
 pub async fn generate_key_pair(pool: web::Data<sqlx::PgPool>, id: PathUuid) -> impl Responder {
     let repo = RsaKeyRepository::new(pool.get_ref().clone());
@@ -77,7 +80,7 @@ pub async fn generate_key_pair(pool: web::Data<sqlx::PgPool>, id: PathUuid) -> i
                     // Build DTO
                     let dto = RsaKeyPairResponse {
                         public_key: general_purpose::STANDARD.encode(public_pem),
-                        private_key:general_purpose::STANDARD.encode(private_pem),
+                        private_key: general_purpose::STANDARD.encode(private_pem),
                     };
 
                     HttpResponse::Ok().json(dto)
@@ -102,5 +105,3 @@ pub async fn generate_key_pair(pool: web::Data<sqlx::PgPool>, id: PathUuid) -> i
         }
     }
 }
-
-

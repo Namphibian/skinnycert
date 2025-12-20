@@ -18,10 +18,17 @@ profiles:
       host: http://127.0.0.1:9090
 
 requests:
+  ecdsa_keys_folder:
+    name: ECDSA Keys
+    requests:
+      list_all_ecdsa:
+        name: List All
+        method: GET
+        url: "{{ host }}/keys/ecdsa"
   rsa_keys_folder:
     name: RSA Keys
     requests:
-      list_all:
+      list_all_rsa:
         name: List All
         method: GET
         url: "{{ host }}/keys/rsa"
