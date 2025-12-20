@@ -25,6 +25,10 @@ requests:
         name: List All
         method: GET
         url: "{{ host }}/keys/ecdsa"
+      get_ecdsa_by_id:
+        name: Get By ID
+        method: GET
+        url: "{{ host }}/keys/ecdsa/dd0b6bfd-4c48-4874-b260-b913e717aae1"
   rsa_keys_folder:
     name: RSA Keys
     requests:
@@ -32,7 +36,7 @@ requests:
         name: List All
         method: GET
         url: "{{ host }}/keys/rsa"
-      get_by_id:
+      get_rsa_by_id:
         name: Get By ID
         method: GET
         url: "{{ host }}/keys/rsa/b277f798-481a-40ce-8a55-c1616262cfe5"
