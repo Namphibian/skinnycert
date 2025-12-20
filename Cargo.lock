@@ -2517,6 +2517,7 @@ dependencies = [
  "futures",
  "openssl",
  "pem",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",

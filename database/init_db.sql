@@ -104,16 +104,11 @@ CREATE TABLE ecdsa_key_algorithm
 (
     -- Specific ECDSA parameters
     display_name TEXT,             -- e.g., 'NIST P-256'
-    curve        TEXT    NOT NULL, -- e.g., 'P256', 'P384', 'P521'
-    nid_name     TEXT    NOT NULL, -- e.g., 'X9_62_PRIME256V1', 'SECP384R1', 'SECP521R1'
     nid_value    INTEGER NOT NULL, -- OpenSSL internal numeric ID
-    standard     TEXT,             -- e.g., 'X9.62', 'SECG', 'NIST'
-
-    -- Uniqueness constraints
-    CONSTRAINT unique_curve UNIQUE (curve),
-    CONSTRAINT unique_nid_name UNIQUE (nid_name),
     CONSTRAINT unique_nid_value UNIQUE (nid_value)
 ) INHERITS (key_algorithms);
+ALTER TABLE ecdsa_key_algorithm
+    ADD COLUMN curve_size INTEGER NOT NULL DEFAULT 0;
 
 -- Trigger to enforce the 'algorithm' column equals 'ECDSA' on child inserts/updates
 CREATE OR REPLACE FUNCTION ecdsa_insert_trigger()
@@ -150,39 +145,39 @@ EXECUTE FUNCTION set_updated_on();
 INSERT INTO ecdsa_key_algorithm
 (
     algorithm,
-    curve,
-    nid_name,
+--     curve,
+--     nid_name,
     nid_value,
-    display_name,
-    standard
+    display_name
+--     standard
 
 )
 VALUES
     (
         'ECDSA',
-        'P256',
-        'X9_62_PRIME256V1',
+--         'P256',
+--         'X9_62_PRIME256V1',
         415,
-        'NIST P-256',
-        'X9.62'
+        'NIST P-256'
+--         'X9.62'
 
     ),
     (
         'ECDSA',
-        'P384',
-        'SECP384R1',
+--         'P384',
+--         'SECP384R1',
         715,
-        'NIST P-384',
-        'SECG'
+        'NIST P-384'
+--         'SECG'
 
     ),
     (
         'ECDSA',
-        'P521',
-        'SECP521R1',
+--         'P521',
+--         'SECP521R1',
         716,
-        'NIST P-521',
-        'SECG'
+        'NIST P-521'
+--         'SECG'
 
     );
 -- ============================================================

@@ -56,9 +56,9 @@
 //! - Ensure that the library call to `EC_get_builtin_curves` is valid.
 //! - Properly interpret the returned `*const c_char` to a Rust string
 //!   to avoid undefined behavior or crashes.
-use std::ffi::{c_char, c_int};
 use openssl::nid::Nid;
 use sqlx::PgPool;
+use std::ffi::{c_char, c_int};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -69,6 +69,13 @@ pub struct EcBuiltinCurve {
 
 unsafe extern "C" {
     fn EC_get_builtin_curves(r: *mut EcBuiltinCurve, n: c_int) -> c_int;
+}
+
+fn extract_curve_size(comment: &str) -> Option<i32> {
+    let re = regex::Regex::new(r"(\d+)\s*bit").unwrap();
+    re.captures(comment)
+        .and_then(|cap| cap.get(1))
+        .and_then(|m| m.as_str().parse::<i32>().ok())
 }
 
 /// Returns all builtin EC curves from OpenSSL
@@ -91,7 +98,9 @@ pub fn builtin_curves() -> Vec<(Nid, String)> {
                 let comment = if c.comment.is_null() {
                     "".to_string()
                 } else {
-                    std::ffi::CStr::from_ptr(c.comment).to_string_lossy().into_owned()
+                    std::ffi::CStr::from_ptr(c.comment)
+                        .to_string_lossy()
+                        .into_owned()
                 };
                 (nid, comment)
             })
@@ -100,40 +109,37 @@ pub fn builtin_curves() -> Vec<(Nid, String)> {
 }
 
 // --- Seeding function ---
+
 pub async fn configure_default_ecdsa_algorithm(pool: &PgPool) -> Result<(), sqlx::Error> {
     let curves = builtin_curves();
 
     for (nid, comment) in curves {
-        let nid_name = format!("{:?}", nid);
         let nid_value = nid.as_raw();
+        let display_name = comment.clone();
+        let curve_size = extract_curve_size(&comment).unwrap_or(0);
 
-        // check if curve already exists
-        let exists: Option<i32> = sqlx::query_scalar!(
-            "SELECT nid_value FROM ecdsa_key_algorithm WHERE nid_value = $1",
-            nid_value
+        tracing::info!(
+            "Ensuring ECDSA curve nid={} size={} ({}) exists",
+            nid_value,
+            curve_size,
+            display_name
+        );
+
+        sqlx::query!(
+            r#"
+            INSERT INTO ecdsa_key_algorithm (algorithm, nid_value, display_name, curve_size)
+            VALUES ($1, $2, $3, $4)
+            ON CONFLICT (nid_value) DO UPDATE
+            SET display_name = EXCLUDED.display_name,
+                curve_size   = EXCLUDED.curve_size
+            "#,
+            "ECDSA",
+            nid_value,
+            display_name,
+            curve_size,
         )
-            .fetch_optional(pool)
-            .await?;
-
-        if exists.is_none() {
-            tracing::info!("Adding curve {} ({})", nid_name, comment);
-            sqlx::query!(
-                "INSERT INTO ecdsa_key_algorithm
-                 (algorithm, curve, nid_name, nid_value, display_name, standard)
-                 VALUES ($1, $2, $3, $4, $5, $6)",
-                "ECDSA",
-                nid_name,         // curve symbolic name
-                nid_name,         // nid_name
-                nid_value,        // nid_value
-                comment,          // display_name (OpenSSL comment string)
-                "OpenSSL builtin" // standard (can refine later)
-            )
-                .execute(pool)
-                .await?;
-        }
-        else {
-            tracing::debug!("Curve {} ({}) already exists", nid_name, comment);
-        }
+        .execute(pool)
+        .await?;
     }
 
     Ok(())

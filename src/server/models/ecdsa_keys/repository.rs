@@ -13,51 +13,7 @@ impl EcdsaKeyRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-    pub async fn create(
-        &self,
-        display_name: &str,
-        curve: i32,
-        nid_name: &str,
-        nid_value: i32,
-        standard: &str,
-    ) -> Result<EcdsaKeyAlgorithm, RepositoryError> {
-        let mut tx = self.pool.begin().await.map_err(map_sqlx_error)?;
 
-        let ecdsa_key: EcdsaKeyAlgorithm = sqlx::query_as::<_, EcdsaKeyAlgorithm>(
-            r#"
-            INSERT INTO ecdsa_key_algorithm
-            (
-                algorithm,
-                display_name,
-                curve,
-                nid_name,
-                nid_value,
-                standard
-            )
-            VALUES
-            (
-                'ECDSA',
-                $1,
-                $2,
-                $3,
-                $4,
-                $5
-            );
-        "#,
-        )
-        .bind(display_name)
-        .bind(curve)
-        .bind(nid_name)
-        .bind(nid_value)
-        .bind(standard)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(map_sqlx_error)?;
-
-        tx.commit().await.map_err(map_sqlx_error)?;
-
-        Ok(ecdsa_key)
-    }
 
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<EcdsaKeyAlgorithm>, RepositoryError> {
         let result = sqlx::query_as::<_, EcdsaKeyAlgorithm>(
@@ -65,6 +21,7 @@ impl EcdsaKeyRepository {
             SELECT *
             FROM ecdsa_key_algorithm
             WHERE id = $1
+            ORDER By curve_size ASC
             "#,
         )
         .bind(id)
@@ -78,7 +35,7 @@ impl EcdsaKeyRepository {
             r#"
             SELECT *
             FROM ecdsa_key_algorithm
-            ORDER BY key_size ASC
+            ORDER BY curve_size ASC
             "#,
         )
         .fetch_all(&self.pool)
