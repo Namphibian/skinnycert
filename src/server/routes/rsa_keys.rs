@@ -3,9 +3,15 @@ pub mod dto;
 
 use actix_web::web;
 
-const PATH: &str = "/keys/rsa";
-const PATH_WITH_ID: &str = concat!("/keys/rsa/{id}");
-const PATH_WITH_ID_KEYPAIR: &str = concat!("/keys/rsa/{id}/keypair");
+macro_rules! rsa_path {
+    () => { "/keys/rsa" };
+    ($suffix:literal) => { concat!("/keys/rsa", $suffix) };
+}
+
+const PATH: &str = rsa_path!();
+const PATH_WITH_ID: &str = rsa_path!("/{id}");
+const PATH_WITH_ID_KEYPAIR: &str = rsa_path!("/{id}/keypair");
+
 
 pub fn configure_rsa_key_route(cfg: &mut web::ServiceConfig) {
     cfg.route(PATH, web::get().to(handler::get_handler));
