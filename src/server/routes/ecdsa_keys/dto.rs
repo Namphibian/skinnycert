@@ -1,7 +1,7 @@
+use crate::server::models::ecdsa_keys::db::EcdsaKeyAlgorithm;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::server::models::ecdsa_keys::db::EcdsaKeyAlgorithm;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EcdsaKeyAlgorithmResponse {

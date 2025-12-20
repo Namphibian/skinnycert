@@ -1,6 +1,6 @@
+use crate::server::models::responses::RepositoryError;
 use actix_web::{HttpResponse, ResponseError};
 use serde::Serialize;
-use crate::server::models::responses::RepositoryError;
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {

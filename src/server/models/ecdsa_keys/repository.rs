@@ -1,8 +1,7 @@
 use crate::server::models::ecdsa_keys::db::EcdsaKeyAlgorithm;
-use crate::server::models::responses::{RepositoryError, map_sqlx_error, PatchResult};
+use crate::server::models::responses::{map_sqlx_error, PatchResult, RepositoryError};
 use sqlx::PgPool;
 use uuid::Uuid;
-
 
 
 pub struct EcdsaKeyRepository {

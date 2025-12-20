@@ -1,7 +1,7 @@
+use crate::server::models::certificates::certificates_model::{EcdsaCurve, KeyAlgorithm, RsaKeySize};
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use uuid::Uuid;
-use crate::server::models::certificates::certificates_model::{EcdsaCurve, KeyAlgorithm, RsaKeySize};
 
 /// Database model for the certificates table
 #[derive(Debug, FromRow)]

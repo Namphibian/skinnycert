@@ -1,13 +1,13 @@
 use crate::server::logger::SkinnycertRouteSpanBuilder;
+use crate::server::routes::certificates::configure_certificate_route;
+use crate::server::routes::ecdsa_keys::configure_ecdsa_key_route;
 use crate::server::routes::health_check::configure_health_check;
+use crate::server::routes::rsa_keys::configure_rsa_key_route;
 use actix_web::dev::Server;
-use actix_web::{App, HttpServer, web};
+use actix_web::{web, App, HttpServer};
+use sqlx::PgPool;
 use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
-use crate::server::routes::certificates::configure_certificate_route;
-use sqlx::PgPool;
-use crate::server::routes::ecdsa_keys::configure_ecdsa_key_route;
-use crate::server::routes::rsa_keys::configure_rsa_key_route;
 
 pub fn run(listener: TcpListener, worker_threads: u16, db_pool: PgPool) -> Result<Server, std::io::Error> {
     let server = HttpServer::new(move || {

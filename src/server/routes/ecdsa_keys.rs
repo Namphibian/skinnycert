@@ -16,7 +16,7 @@ const PATH_WITH_ID_KEYPAIR: &str = ecdsa_path!("/{id}/keypair");
 
 pub fn configure_ecdsa_key_route(cfg: &mut web::ServiceConfig) {
     cfg.route(PATH, web::get().to(handler::get_handler));
-    // cfg.route(PATH_WITH_ID, web::get().to(handler::get_by_id_handler));
+    cfg.route(PATH_WITH_ID, web::get().to(handler::get_by_id_handler));
     //
     // cfg.route(PATH_WITH_ID, web::put().to(handler::put_handler));
     // cfg.route(PATH_WITH_ID, web::patch().to(handler::patch_handler));

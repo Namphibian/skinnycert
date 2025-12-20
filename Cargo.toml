@@ -31,7 +31,7 @@ tracing-bunyan-formatter = "0.3.10"
 tracing-actix-web = "0.7.19"
 clap = { version = "4.5.48", features = ["derive"] }
 chrono = { version = "0.4.31", features = ["serde"] }
-openssl = "0.10.74"
+openssl = "0.10.75"
 x509-parser = "0.18.0"
 pem = "3.0.6"
 uuid = { version = "1.18.1", features = ["v4", "serde"] }

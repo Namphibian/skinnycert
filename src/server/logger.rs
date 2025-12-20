@@ -5,7 +5,7 @@ use actix_web::Error;
 use std::io::Stdout;
 use tracing::Span;
 use tracing_actix_web::{DefaultRootSpanBuilder, RootSpanBuilder};
-use tracing_bunyan_formatter::{BunyanFormattingLayer};
+use tracing_bunyan_formatter::BunyanFormattingLayer;
 
 
 pub struct SkinnycertRouteSpanBuilder;

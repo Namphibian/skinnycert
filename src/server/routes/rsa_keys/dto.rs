@@ -50,47 +50,21 @@ impl TryFrom<RSAKeyAlgorithm> for RsaKeyAlgorithmResponse {
 }
 
 
-pub fn to_response(result: Result<Option<RSAKeyAlgorithm>, RepositoryError>) -> HttpResponse {
-    match result {
-        Ok(Some(model)) => map_model(model),
-        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
-            "error": "RSA Key not found"
-        })),
-        Err(e) => {
-            tracing::error!(error = %e, context = "to_response/find_by_id", "Repository error while fetching RSA key");
-            HttpResponse::build(e.status_code()).json(serde_json::json!({
-                "error": e.to_string()
-            }))
-        }
-    }
-}
-
-// pub fn to_response_list(result: Result<Vec<RSAKeyAlgorithm>, RepositoryError>) -> HttpResponse {
+// pub fn to_response(result: Result<Option<RSAKeyAlgorithm>, RepositoryError>) -> HttpResponse {
 //     match result {
-//         Ok(models) => {
-//             let dtos: Result<Vec<_>, _> = models
-//                 .into_iter()
-//                 .map(RsaKeyAlgorithmResponse::try_from)
-//                 .collect();
-//             match dtos {
-//                 Ok(valid) => HttpResponse::Ok().json(valid),
-//                 Err(e) => {
-//                     tracing::error!(error = %e, context = "to_response_list", "Conversion failed for RSA key list");
-//                     HttpResponse::InternalServerError().json(serde_json::json!({
-//                         "error": "Invalid RSA key format",
-//                         "message": e.to_string()
-//                     }))
-//                 }
-//             }
-//         }
+//         Ok(Some(model)) => map_model(model),
+//         Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
+//             "error": "RSA Key not found"
+//         })),
 //         Err(e) => {
-//             tracing::error!(error = %e, context = "to_response_list", "Repository error while fetching RSA key list");
+//             tracing::error!(error = %e, context = "to_response/find_by_id", "Repository error while fetching RSA key");
 //             HttpResponse::build(e.status_code()).json(serde_json::json!({
 //                 "error": e.to_string()
 //             }))
 //         }
 //     }
 // }
+
 
 
 pub fn to_patch_response(

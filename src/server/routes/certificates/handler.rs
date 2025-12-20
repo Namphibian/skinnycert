@@ -1,7 +1,7 @@
 use super::dto::{CertificateResponseDto, CreateCertificateDto, PatchCertificateDto};
-use crate::server::models::certificates::repository::CertificateRepository;
 use crate::server::models::certificates::certificates_model::CertificateGenerationRequest;
-use actix_web::{HttpResponse, Responder, web};
+use crate::server::models::certificates::repository::CertificateRepository;
+use actix_web::{web, HttpResponse, Responder};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 use x509_parser::prelude::FromDer;

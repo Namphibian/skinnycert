@@ -1,6 +1,6 @@
 use clap::Parser;
 use skinnycert::server::app::run;
-use skinnycert::server::config::{ServerListeningAddress, ServerPort, configure_environment};
+use skinnycert::server::config::{configure_environment, ServerListeningAddress, ServerPort};
 use std::net::IpAddr;
 
 #[derive(Parser, Debug)]

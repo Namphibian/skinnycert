@@ -1,6 +1,6 @@
-use std::fs;
-use actix_web::{HttpResponse, Responder};
 use crate::server::routes::health_check::model::{HealthCheckResponse, MemoryInfo};
+use actix_web::{HttpResponse, Responder};
+use std::fs;
 
 /// Handles the `GET /health` endpoint.
 ///

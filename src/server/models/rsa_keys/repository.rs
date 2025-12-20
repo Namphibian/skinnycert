@@ -1,5 +1,5 @@
 //! A module for managing RSA key algorithms in a PostgreSQL database.
-use crate::server::models::responses::{RepositoryError, map_sqlx_error, PatchResult};
+use crate::server::models::responses::{map_sqlx_error, PatchResult, RepositoryError};
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 use sqlx::PgPool;
 use uuid::Uuid;

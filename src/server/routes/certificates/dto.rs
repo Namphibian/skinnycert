@@ -1,8 +1,8 @@
+use crate::server::models::certificates::certificates_model::{CertificateSubject, KeyAlgorithm, KeyStrength};
+use crate::server::models::certificates::db::DbCertificateWithSans;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::server::models::certificates::certificates_model::{CertificateSubject, KeyAlgorithm, KeyStrength};
-use crate::server::models::certificates::db::DbCertificateWithSans;
 
 /// DTO for certificate response (sent to clients)
 #[derive(Debug, Serialize, Deserialize)]

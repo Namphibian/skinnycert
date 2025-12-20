@@ -1,16 +1,16 @@
+use crate::server::models::responses::RepositoryError;
+use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 use crate::server::models::rsa_keys::repository::RsaKeyRepository;
 use crate::server::routes::extractors::PathUuid;
 use crate::server::routes::responses::{to_response, to_response_list};
-use crate::server::routes::rsa_keys::dto::{NewRsaKeyAlgorithmRequest, RsaKeyAlgorithmPatchRequest, RsaKeyPairResponse, to_create_response, to_delete_response, to_patch_response, RsaKeyAlgorithmResponse};
-use actix_web::{HttpResponse, Responder, ResponseError, web};
+use crate::server::routes::rsa_keys::dto::{to_create_response, to_delete_response, to_patch_response, NewRsaKeyAlgorithmRequest, RsaKeyAlgorithmPatchRequest, RsaKeyAlgorithmResponse, RsaKeyPairResponse};
+use actix_web::{web, HttpResponse, Responder, ResponseError};
 use base64;
-use base64::Engine;
 use base64::engine::general_purpose;
+use base64::Engine;
 use openssl::rsa::Rsa;
-use crate::server::models::responses::RepositoryError;
-use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 
-#[tracing::instrument(name = "Get All RSAKeys", skip(pool))]
+#[tracing::instrument(name = "Get All RSA Keys", skip(pool))]
 pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
     let repo = RsaKeyRepository::new(pool.get_ref().clone());
     to_response_list::<RSAKeyAlgorithm, RsaKeyAlgorithmResponse, RepositoryError>(
@@ -18,13 +18,13 @@ pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
     )
 }
 
-#[tracing::instrument(name = "Create RSAKey Algorithm", skip(pool))]
+#[tracing::instrument(name = "Get RSA Key Algorithm By ID", skip(pool))]
 pub async fn get_by_id_handler(pool: web::Data<sqlx::PgPool>, id: PathUuid) -> impl Responder {
     let repo = RsaKeyRepository::new(pool.get_ref().clone());
     to_response::<RSAKeyAlgorithm, RsaKeyAlgorithmResponse, RepositoryError>(repo.find_by_id(id.0).await)
 }
 
-#[tracing::instrument(name = "Create RSAKey Algorithm", skip(pool, payload))]
+#[tracing::instrument(name = "Create RSA Key Algorithm", skip(pool, payload))]
 pub async fn post_handler(
     pool: web::Data<sqlx::PgPool>,
     payload: web::Json<NewRsaKeyAlgorithmRequest>,
@@ -40,7 +40,7 @@ pub async fn post_handler(
     to_create_response(repo.create(dto.rsa_key_size).await)
 }
 
-#[tracing::instrument(name = "Put RSAKeys", skip(_pool))]
+#[tracing::instrument(name = "Put RSA Keys", skip(_pool))]
 pub async fn put_handler(_pool: web::Data<sqlx::PgPool>) -> impl Responder {
     return HttpResponse::NotImplemented().json(serde_json::json!({
         "error": "Cannot Update RSA Key Algorithm",
@@ -48,7 +48,7 @@ pub async fn put_handler(_pool: web::Data<sqlx::PgPool>) -> impl Responder {
     }));
 }
 
-#[tracing::instrument(name = "Patch RSAKeys", skip(pool))]
+#[tracing::instrument(name = "Patch RSA Keys", skip(pool))]
 pub async fn patch_handler(
     pool: web::Data<sqlx::PgPool>,
     id: PathUuid,

@@ -1,4 +1,5 @@
 use crate::server::logger::configure_bunyan_logger_format;
+use crate::server::models::ecdsa_keys::openssl::configure_default_ecdsa_algorithm;
 use dotenvy::dotenv;
 use openssl::rand::rand_bytes;
 use sqlx::postgres::{PgPool, PgPoolOptions};
@@ -9,8 +10,7 @@ use std::thread::available_parallelism;
 use tracing::dispatcher;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
-use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
-use crate::server::models::ecdsa_keys::openssl::configure_default_ecdsa_algorithm;
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 const DEFAULT_PORT: u16 = 8080;
 const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;
