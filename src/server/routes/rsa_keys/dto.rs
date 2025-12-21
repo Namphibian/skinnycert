@@ -1,4 +1,4 @@
-use crate::server::models::responses::{PatchResult, RepositoryError};
+use crate::server::models::responses::{RepositoryError};
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 
 use actix_web::{HttpResponse, ResponseError};
@@ -105,15 +105,15 @@ pub fn to_delete_response(result: Result<Option<RSAKeyAlgorithm>, RepositoryErro
         }
     }
 }
-fn map_model(model: RSAKeyAlgorithm) -> HttpResponse {
-    match RsaKeyAlgorithmResponse::try_from(model) {
-        Ok(dto) => HttpResponse::Ok().json(dto),
-        Err(e) => {
-            tracing::error!(error = %e, context = "map_model", "Conversion failed for RSA key model");
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Invalid RSA key algorithm format",
-                "message": e.to_string()
-            }))
-        }
-    }
-}
+// fn map_model(model: RSAKeyAlgorithm) -> HttpResponse {
+//     match RsaKeyAlgorithmResponse::try_from(model) {
+//         Ok(dto) => HttpResponse::Ok().json(dto),
+//         Err(e) => {
+//             tracing::error!(error = %e, context = "map_model", "Conversion failed for RSA key model");
+//             HttpResponse::InternalServerError().json(serde_json::json!({
+//                 "error": "Invalid RSA key algorithm format",
+//                 "message": e.to_string()
+//             }))
+//         }
+//     }
+// }
