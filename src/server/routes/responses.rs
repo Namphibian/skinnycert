@@ -1,4 +1,4 @@
-use crate::server::models::responses::RepositoryError;
+use crate::server::models::responses::{PatchResult, RepositoryError};
 use actix_web::{HttpResponse, ResponseError};
 use serde::Serialize;
 
@@ -130,6 +130,52 @@ where
                 error = %err,
                 context = "to_response/single",
                 "Repository error"
+            );
+            HttpResponse::build(err.status_code()).json(serde_json::json!({
+                "error": err.to_string()
+            }))
+        }
+    }
+}
+
+pub fn to_patch_response<M, D, E>(
+    result: Result<PatchResult<M>, E>
+) -> HttpResponse
+where
+    D: TryFrom<M> + serde::Serialize,
+    D::Error: std::fmt::Display,
+    E: Into<RepositoryError> + std::fmt::Display,
+{
+    match result {
+        Ok(PatchResult::Updated(model)) => {
+            match D::try_from(model) {
+                Ok(dto) => HttpResponse::Ok().json(dto),
+                Err(e) => {
+                    tracing::error!(
+                        error = %e,
+                        context = "to_patch_response",
+                        "DTO conversion failed"
+                    );
+                    HttpResponse::InternalServerError().json(serde_json::json!({
+                        "error": "Invalid format",
+                        "message": e.to_string()
+                    }))
+                }
+            }
+        }
+
+        Ok(PatchResult::NotFound) => HttpResponse::NotFound().json(serde_json::json!({
+            "error": "Resource not found. It may have been deleted after the patch request was processed."
+        })),
+
+        Ok(PatchResult::NotModified) => HttpResponse::NotModified().finish(),
+
+        Err(e) => {
+            let err: RepositoryError = e.into();
+            tracing::error!(
+                error = %err,
+                context = "to_patch_response",
+                "Repository error while patching resource"
             );
             HttpResponse::build(err.status_code()).json(serde_json::json!({
                 "error": err.to_string()

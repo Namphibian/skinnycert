@@ -50,40 +50,25 @@ impl TryFrom<RSAKeyAlgorithm> for RsaKeyAlgorithmResponse {
 }
 
 
-// pub fn to_response(result: Result<Option<RSAKeyAlgorithm>, RepositoryError>) -> HttpResponse {
+
+
+// pub fn to_patch_response(
+//     result: Result<PatchResult<RSAKeyAlgorithm>, RepositoryError>,
+// ) -> HttpResponse {
 //     match result {
-//         Ok(Some(model)) => map_model(model),
-//         Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
-//             "error": "RSA Key not found"
+//         Ok(PatchResult::Updated(model)) => map_model(model),
+//         Ok(PatchResult::NotFound) => HttpResponse::NotFound().json(serde_json::json!({
+//             "error": "Patch RSA Key not found. RSA Key may have been deleted after the patch request was processed."
 //         })),
+//         Ok(PatchResult::NotModified) => HttpResponse::NotModified().finish(),
 //         Err(e) => {
-//             tracing::error!(error = %e, context = "to_response/find_by_id", "Repository error while fetching RSA key");
+//             tracing::error!(error = %e, context = "to_patch_response", "Repository error while patching RSA key");
 //             HttpResponse::build(e.status_code()).json(serde_json::json!({
 //                 "error": e.to_string()
 //             }))
 //         }
 //     }
 // }
-
-
-
-pub fn to_patch_response(
-    result: Result<PatchResult<RSAKeyAlgorithm>, RepositoryError>,
-) -> HttpResponse {
-    match result {
-        Ok(PatchResult::Updated(model)) => map_model(model),
-        Ok(PatchResult::NotFound) => HttpResponse::NotFound().json(serde_json::json!({
-            "error": "Patch RSA Key not found. RSA Key may have been deleted after the patch request was processed."
-        })),
-        Ok(PatchResult::NotModified) => HttpResponse::NotModified().finish(),
-        Err(e) => {
-            tracing::error!(error = %e, context = "to_patch_response", "Repository error while patching RSA key");
-            HttpResponse::build(e.status_code()).json(serde_json::json!({
-                "error": e.to_string()
-            }))
-        }
-    }
-}
 
 pub fn to_create_response(result: Result<RSAKeyAlgorithm, RepositoryError>) -> HttpResponse {
     match result {

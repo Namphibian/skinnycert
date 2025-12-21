@@ -2,8 +2,8 @@ use crate::server::models::responses::RepositoryError;
 use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
 use crate::server::models::rsa_keys::repository::RsaKeyRepository;
 use crate::server::routes::extractors::PathUuid;
-use crate::server::routes::responses::{to_response, to_response_list};
-use crate::server::routes::rsa_keys::dto::{to_create_response, to_delete_response, to_patch_response, NewRsaKeyAlgorithmRequest, RsaKeyAlgorithmPatchRequest, RsaKeyAlgorithmResponse, RsaKeyPairResponse};
+use crate::server::routes::responses::{to_patch_response, to_response, to_response_list};
+use crate::server::routes::rsa_keys::dto::{to_create_response, to_delete_response, NewRsaKeyAlgorithmRequest, RsaKeyAlgorithmPatchRequest, RsaKeyAlgorithmResponse, RsaKeyPairResponse};
 use actix_web::{web, HttpResponse, Responder, ResponseError};
 use base64;
 use base64::engine::general_purpose;
@@ -55,7 +55,8 @@ pub async fn patch_handler(
     payload: web::Json<RsaKeyAlgorithmPatchRequest>,
 ) -> impl Responder {
     let repo = RsaKeyRepository::new(pool.get_ref().clone());
-    to_patch_response(repo.patch(id.0, payload.deprecated).await)
+    //to_patch_response(repo.patch(id.0, payload.deprecated).await)
+    to_patch_response::<RSAKeyAlgorithm, RsaKeyAlgorithmResponse, RepositoryError>(repo.patch(id.0,payload.deprecated).await)
 }
 
 #[tracing::instrument(name = "Delete RSAKeys", skip(pool))]
