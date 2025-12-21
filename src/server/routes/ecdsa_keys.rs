@@ -22,4 +22,5 @@ pub fn configure_ecdsa_key_route(cfg: &mut web::ServiceConfig) {
     // cfg.route(PATH_WITH_ID, web::patch().to(handler::patch_handler));
     // cfg.route(PATH_WITH_ID, web::delete().to(handler::delete_handler));
     // cfg.route(PATH_WITH_ID_KEYPAIR, web::get().to(handler::generate_key_pair));
+    cfg.route(PATH_WITH_ID_KEYPAIR, web::get().to(handler::generate_key_pair));
 }
