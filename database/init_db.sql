@@ -183,6 +183,7 @@ VALUES
 -- ============================================================
 -- Main certificates table
 -- ============================================================
+DROP TABLE IF EXISTS certificates CASCADE;
 CREATE TABLE certificates
 (
     id                  uuid PRIMARY KEY     DEFAULT uuid_generate_v4(),

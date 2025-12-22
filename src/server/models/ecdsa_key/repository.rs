@@ -20,7 +20,6 @@ impl EcdsaKeyRepository {
             SELECT *
             FROM ecdsa_key_algorithm
             WHERE id = $1
-            ORDER By curve_size ASC
             "#,
         )
         .bind(id)

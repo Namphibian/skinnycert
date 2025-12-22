@@ -1,3 +1,6 @@
+//! ```rust
+//! A module that defines a `KeyAlgorithm` trait for cryptographic key operations.
+
 use std::error::Error;
 
 pub trait KeyAlgorithm {
