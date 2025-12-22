@@ -1,7 +1,8 @@
 use openssl::nid::Nid;
 use openssl::pkey::PKey;
-use skinnycert::server::models::ecdsa_keys::db::EcdsaKeyAlgorithm;
+use skinnycert::server::models::ecdsa_key::db::EcdsaKeyAlgorithm;
 use uuid::Uuid;
+use skinnycert::server::models::key_algorithm::KeyAlgorithm;
 
 #[test]
 fn test_generate_ecdsa_key_pair() {
@@ -34,4 +35,6 @@ fn test_generate_ecdsa_key_pair() {
     // Validate public key parses as SPKI
     let public_key = PKey::public_key_from_pem(public_pem.as_bytes());
     assert!(public_key.is_ok(), "Public key should be valid SPKI PEM");
+    let match_result = algo.verify_key_pair(private_pem.clone(), public_pem.clone());
+    assert!(match_result.is_ok(), "Key pair verification should succeed");
 }

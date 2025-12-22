@@ -1,4 +1,4 @@
-use crate::server::models::ecdsa_keys::db::EcdsaKeyAlgorithm;
+use crate::server::models::ecdsa_key::db::EcdsaKeyAlgorithm;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -17,12 +17,6 @@ pub struct EcdsaKeyAlgorithmResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EcdsaKeyAlgorithmPatchRequest {
     pub deprecated: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EcdsaKeyKeyPairResponse {
-    pub public_key: String,
-    pub private_key: String,
 }
 
 impl TryFrom<EcdsaKeyAlgorithm> for EcdsaKeyAlgorithmResponse {

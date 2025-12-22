@@ -3,8 +3,8 @@ mod dto;
 
 use actix_web::web;
 
-const PATH: &str = "/certificates";
-const PATH_WITH_ID: &str = "/certificates/{id}";
+const PATH: &str = "/legacy_certificates";
+const PATH_WITH_ID: &str = "/legacy_certificates/{id}";
 
 pub fn configure_certificate_route(cfg: &mut web::ServiceConfig) {
     cfg.route(PATH, web::get().to(handler::get_handler));

@@ -67,8 +67,8 @@ ssls:
         # SSL Certificate for API Six Client Communication
         # This SSL certificate is used for communication between API Six and the client.
         # It is a server certificate that corresponds to the SNI (Server Name Indication) specified in the configuration YAML file (see the `snis` element).
-        # Certificate files are located in the `certificates/tls/gateway` folder.
-        # Generate these certificates using the `gen_tls_cert.sh` script.
+        # Certificate files are located in the `legacy_certificates/tls/gateway` folder.
+        # Generate these legacy_certificates using the `gen_tls_cert.sh` script.
         #---------------------------------------------------------------------------------------------------------------
         id: ssl_server_certificate
         cert: |

@@ -1,13 +1,10 @@
 mod common;
 
-use openssl::hash::MessageDigest;
 use openssl::pkey::PKey;
-use common::spawn_app;
 use openssl::rsa::Rsa;
-use openssl::sign::{Signer, Verifier};
 use uuid::Uuid;
-use skinnycert::server::models::certificates::certificates_model::{validate_key_pair, CertificateGenerationRequest, KeyAlgorithm, KeyStrength, RsaKeySize};
-use skinnycert::server::models::rsa_keys::db::RSAKeyAlgorithm;
+use skinnycert::server::models::key_algorithm::KeyAlgorithm;
+use skinnycert::server::models::rsa_key::db::RSAKeyAlgorithm;
 
 #[test]
 fn test_generate_key_pair_valid() {

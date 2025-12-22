@@ -81,9 +81,11 @@ use openssl::pkey::PKey;
 use openssl::rsa::Rsa;
 use openssl::sign::{Signer, Verifier};
 
+use crate::server::models::key_algorithm::KeyAlgorithm;
 use sqlx::FromRow;
 use std::error::Error;
 use uuid::Uuid;
+
 #[derive(Debug, FromRow)]
 pub struct RSAKeyAlgorithm {
     pub id: Uuid,
@@ -95,9 +97,8 @@ pub struct RSAKeyAlgorithm {
     pub updated_on: Option<DateTime<Utc>>,
 }
 
-impl RSAKeyAlgorithm {
-    
-    pub fn generate_key_pair(&self) -> Result<(String, String), Box<dyn Error>> {
+impl KeyAlgorithm for RSAKeyAlgorithm {
+    fn generate_key_pair(&self) -> Result<(String, String), Box<dyn Error>> {
         let rsa = Rsa::generate(self.key_size as u32)?;
         let pkey = PKey::from_rsa(rsa)?;
         // Extract private key PEM
@@ -107,7 +108,8 @@ impl RSAKeyAlgorithm {
         let public_key_pem = String::from_utf8(pkey.public_key_to_pem()?)?;
         Ok((private_key_pem, public_key_pem))
     }
-    pub fn verify_key_pair(
+
+    fn verify_key_pair(
         &self,
         private_key_pem: String,
         public_key_pem: String,

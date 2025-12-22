@@ -1,6 +1,6 @@
 use super::dto::{CertificateResponseDto, CreateCertificateDto, PatchCertificateDto};
-use crate::server::models::certificates::certificates_model::CertificateGenerationRequest;
-use crate::server::models::certificates::repository::CertificateRepository;
+use crate::server::models::legacy_certificates::certificates_model::CertificateGenerationRequest;
+use crate::server::models::legacy_certificates::repository::CertificateRepository;
 use actix_web::{web, HttpResponse, Responder};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
@@ -29,9 +29,9 @@ pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
             }
         }
         Err(e) => {
-            tracing::error!("Failed to retrieve certificates: {}", e);
+            tracing::error!("Failed to retrieve legacy_certificates: {}", e);
             HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to retrieve certificates",
+                "error": "Failed to retrieve legacy_certificates",
                 "message": e.to_string()
             }))
         }

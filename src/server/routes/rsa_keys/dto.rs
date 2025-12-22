@@ -1,5 +1,5 @@
-use crate::server::models::responses::{RepositoryError};
-use crate::server::models::rsa_keys::db::RSAKeyAlgorithm;
+use crate::server::models::responses::RepositoryError;
+use crate::server::models::rsa_key::db::RSAKeyAlgorithm;
 
 use actix_web::{HttpResponse, ResponseError};
 use chrono::{DateTime, Utc};
@@ -26,15 +26,8 @@ pub struct RsaKeyAlgorithmPatchRequest {
     pub deprecated: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct RsaKeyPairResponse {
-    pub public_key: String,
-    pub private_key: String,
-}
-
 impl TryFrom<RSAKeyAlgorithm> for RsaKeyAlgorithmResponse {
     type Error = Box<dyn std::error::Error + Send + Sync>;
-
 
     fn try_from(value: RSAKeyAlgorithm) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -48,27 +41,6 @@ impl TryFrom<RSAKeyAlgorithm> for RsaKeyAlgorithmResponse {
         })
     }
 }
-
-
-
-
-// pub fn to_patch_response(
-//     result: Result<PatchResult<RSAKeyAlgorithm>, RepositoryError>,
-// ) -> HttpResponse {
-//     match result {
-//         Ok(PatchResult::Updated(model)) => map_model(model),
-//         Ok(PatchResult::NotFound) => HttpResponse::NotFound().json(serde_json::json!({
-//             "error": "Patch RSA Key not found. RSA Key may have been deleted after the patch request was processed."
-//         })),
-//         Ok(PatchResult::NotModified) => HttpResponse::NotModified().finish(),
-//         Err(e) => {
-//             tracing::error!(error = %e, context = "to_patch_response", "Repository error while patching RSA key");
-//             HttpResponse::build(e.status_code()).json(serde_json::json!({
-//                 "error": e.to_string()
-//             }))
-//         }
-//     }
-// }
 
 pub fn to_create_response(result: Result<RSAKeyAlgorithm, RepositoryError>) -> HttpResponse {
     match result {
@@ -91,7 +63,9 @@ pub fn to_create_response(result: Result<RSAKeyAlgorithm, RepositoryError>) -> H
     }
 }
 
-pub fn to_delete_response(result: Result<Option<RSAKeyAlgorithm>, RepositoryError>) -> HttpResponse {
+pub fn to_delete_response(
+    result: Result<Option<RSAKeyAlgorithm>, RepositoryError>,
+) -> HttpResponse {
     match result {
         Ok(Some(_)) => HttpResponse::NoContent().finish(),
         Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
@@ -105,15 +79,3 @@ pub fn to_delete_response(result: Result<Option<RSAKeyAlgorithm>, RepositoryErro
         }
     }
 }
-// fn map_model(model: RSAKeyAlgorithm) -> HttpResponse {
-//     match RsaKeyAlgorithmResponse::try_from(model) {
-//         Ok(dto) => HttpResponse::Ok().json(dto),
-//         Err(e) => {
-//             tracing::error!(error = %e, context = "map_model", "Conversion failed for RSA key model");
-//             HttpResponse::InternalServerError().json(serde_json::json!({
-//                 "error": "Invalid RSA key algorithm format",
-//                 "message": e.to_string()
-//             }))
-//         }
-//     }
-// }

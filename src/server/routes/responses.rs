@@ -1,13 +1,18 @@
+use crate::server::models::key_algorithm::KeyAlgorithm;
 use crate::server::models::responses::{PatchResult, RepositoryError};
 use actix_web::{HttpResponse, ResponseError};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
     pub error: String,
     pub details: Option<String>,
 }
-
+#[derive(Debug, Serialize, Deserialize)]
+pub struct KeyPairResponse {
+    pub public_key: String,
+    pub private_key: String,
+}
 impl ResponseError for RepositoryError {
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
@@ -164,6 +169,38 @@ where
                 context = "to_patch_response",
                 "Repository error while patching resource"
             );
+            HttpResponse::build(err.status_code()).json(serde_json::json!({
+                "error": err.to_string()
+            }))
+        }
+    }
+}
+pub fn key_pair_response<M, E>(
+    result: Result<Option<M>, E>,
+    not_found_msg: &'static str,
+) -> HttpResponse
+where
+    M: KeyAlgorithm,
+    E: Into<RepositoryError> + std::fmt::Display,
+{
+    match result {
+        Ok(Some(model)) => match model.generate_key_pair() {
+            Ok((private_key, public_key)) => HttpResponse::Ok().json(KeyPairResponse {
+                private_key,
+                public_key,
+            }),
+            Err(e) => HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Failed to generate key pair",
+                "message": e.to_string()
+            })),
+        },
+
+        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
+            "error": not_found_msg
+        })),
+
+        Err(e) => {
+            let err: RepositoryError = e.into();
             HttpResponse::build(err.status_code()).json(serde_json::json!({
                 "error": err.to_string()
             }))

@@ -1,70 +1,46 @@
-use crate::server::models::certificates::certificates_model::{EcdsaCurve, KeyAlgorithm, RsaKeySize};
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-/// Database model for the certificates table
 #[derive(Debug, FromRow)]
-pub struct DbCertificate {
+pub struct Certificate {
     pub id: Uuid,
+
+    // PEM data
     pub csr_pem: String,
     pub cert_pem: Option<String>,
     pub key_pem: String,
     pub public_key_pem: String,
     pub chain_pem: Option<String>,
-    pub key_algorithm: String,
-    pub rsa_key_size: Option<String>,
-    pub ecdsa_curve: Option<String>,
+
+    // Polymorphic key algorithm reference
+    pub key_algorithm_id: Uuid,
+
+    // Subject details
     pub organization: Option<String>,
     pub organizational_unit: Option<String>,
     pub country: Option<String>,
     pub state_or_province: Option<String>,
     pub locality: Option<String>,
     pub email: Option<String>,
+
+    // Certificate metadata
     pub fingerprint: Option<String>,
     pub valid_from: Option<DateTime<Utc>>,
     pub expires_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub cert_uploaded_at: Option<DateTime<Utc>>,
-    pub deleted_at: Option<DateTime<Utc>>,
+
+    // Audit timestamps
+    pub created_on: DateTime<Utc>,
+    pub updated_on: DateTime<Utc>,
+    pub cert_uploaded_on: Option<DateTime<Utc>>,
+    pub deleted_on: Option<DateTime<Utc>>,
 }
 
-/// Database model for certificate SANs
 #[derive(Debug, FromRow)]
-pub struct DbCertificateSan {
+pub struct CertificateSan {
     pub id: Uuid,
     pub certificate_id: Uuid,
     pub san_value: String,
     pub san_order: i32,
-    pub created_at: DateTime<Utc>,
-}
-
-/// View model with SANs aggregated
-#[derive(Debug, FromRow)]
-pub struct DbCertificateWithSans {
-    pub id: Uuid,
-    pub csr_pem: String,
-    pub cert_pem: Option<String>,
-    pub key_pem: String,
-    pub public_key_pem: String,
-    pub chain_pem: Option<String>,
-    pub key_algorithm: KeyAlgorithm,
-    pub rsa_key_size: Option<RsaKeySize>,
-    pub ecdsa_curve: Option<EcdsaCurve>,
-    pub organization: Option<String>,
-    pub organizational_unit: Option<String>,
-    pub country: Option<String>,
-    pub state_or_province: Option<String>,
-    pub locality: Option<String>,
-    pub email: Option<String>,
-    pub fingerprint: Option<String>,
-    pub valid_from: Option<DateTime<Utc>>,
-    pub expires_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub cert_uploaded_at: Option<DateTime<Utc>>,
-    pub deleted_at: Option<DateTime<Utc>>,
-    pub sans: Vec<String>,
-    pub common_name: Option<String>,
+    pub created_on: DateTime<Utc>,
 }

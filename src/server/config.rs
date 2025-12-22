@@ -1,5 +1,5 @@
 use crate::server::logger::configure_bunyan_logger_format;
-use crate::server::models::ecdsa_keys::openssl::configure_default_ecdsa_algorithm;
+use crate::server::models::ecdsa_key::openssl::configure_default_ecdsa_algorithm;
 use dotenvy::dotenv;
 use openssl::rand::rand_bytes;
 use sqlx::postgres::{PgPool, PgPoolOptions};

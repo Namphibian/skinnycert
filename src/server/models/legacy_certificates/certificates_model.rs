@@ -237,7 +237,7 @@ impl CertificateGenerationRequest {
 // ============================================================================
 
 /// Extracts the public key in PEM format from a private key PEM string
-/// Supports both RSA and ECDSA rsa_keys
+/// Supports both RSA and ECDSA rsa_key
 pub fn extract_public_key_from_private_key(
     private_key_pem: &str,
 ) -> Result<String, Box<dyn Error>> {

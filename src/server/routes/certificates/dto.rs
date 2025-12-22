@@ -1,5 +1,5 @@
-use crate::server::models::certificates::certificates_model::{CertificateSubject, KeyAlgorithm, KeyStrength};
-use crate::server::models::certificates::db::DbCertificateWithSans;
+use crate::server::models::legacy_certificates::certificates_model::{CertificateSubject, KeyAlgorithm, KeyStrength};
+use crate::server::models::legacy_certificates::db::DbCertificateWithSans;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

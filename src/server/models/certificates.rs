@@ -1,3 +1,2 @@
-pub mod repository;
-pub mod certificates_model;
-pub mod db;
+mod db;
+mod repository;

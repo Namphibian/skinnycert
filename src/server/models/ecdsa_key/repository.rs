@@ -1,4 +1,4 @@
-use crate::server::models::ecdsa_keys::db::EcdsaKeyAlgorithm;
+use crate::server::models::ecdsa_key::db::EcdsaKeyAlgorithm;
 use crate::server::models::responses::{map_sqlx_error, PatchResult, RepositoryError};
 use sqlx::PgPool;
 use uuid::Uuid;

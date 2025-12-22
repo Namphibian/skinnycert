@@ -14,7 +14,7 @@ async fn get_certificates_test() {
     // --- Act ---
     // Send a GET request to the `/health` endpoint.
     let response = client
-        .get(&format!("{}/certificates", &address))
+        .get(&format!("{}/legacy_certificates", &address))
         .send()
         .await
         .expect("Failed to execute request.");
