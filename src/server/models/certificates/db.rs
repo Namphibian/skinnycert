@@ -3,6 +3,52 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(Debug, FromRow)]
+pub struct CertificateDetails {
+    pub id: Uuid,
+
+    // PEM data
+    pub csr_pem: String,
+    pub cert_pem: Option<String>,
+    pub key_pem: String,
+    pub public_key_pem: String,
+    pub chain_pem: Option<String>,
+
+    // Algorithm metadata
+    pub key_algorithm_id: Uuid,
+    pub algorithm: String,
+    pub key_size: i32,
+    pub display_name: String,
+    pub deprecated: bool,
+
+    // Subject details
+    pub organization: Option<String>,
+    pub organizational_unit: Option<String>,
+    pub country: Option<String>,
+    pub state_or_province: Option<String>,
+    pub locality: Option<String>,
+    pub email: Option<String>,
+
+    // SANs
+    pub sans: Vec<String>,
+    pub common_name: Option<String>,
+
+    // Certificate metadata
+    pub fingerprint: Option<String>,
+    pub valid_from: Option<DateTime<Utc>>,
+    pub valid_to: Option<DateTime<Utc>>,
+
+    // Derived metadata
+    pub is_signed: bool,
+    pub is_expired: bool,
+
+    // Audit timestamps
+    pub created_on: DateTime<Utc>,
+    pub updated_on: DateTime<Utc>,
+    pub cert_uploaded_on: Option<DateTime<Utc>>,
+    pub deleted_on: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, FromRow)]
 pub struct Certificate {
     pub id: Uuid,
 

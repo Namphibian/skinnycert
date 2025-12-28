@@ -209,7 +209,7 @@ CREATE TABLE certificates
     -- Certificate metadata
     fingerprint         VARCHAR(64) UNIQUE,
     valid_from          timestamptz,
-    expires_on          timestamptz,
+    valid_to            timestamptz,
 
     -- Audit timestamps
     created_on          timestamptz NOT NULL DEFAULT NOW(),
@@ -260,7 +260,9 @@ SELECT 'ECDSA'            AS algorithm,
        ecdsa.deprecated   AS deprecated
 FROM ecdsa_key_algorithm ecdsa;
 
-CREATE OR REPLACE VIEW certificate_complete AS
+DROP VIEW IF EXISTS certificate_details CASCADE;
+
+CREATE OR REPLACE VIEW certificate_details AS
 SELECT
     c.id,
     c.csr_pem,
@@ -269,34 +271,52 @@ SELECT
     c.public_key_pem,
     c.chain_pem,
     c.key_algorithm_id,
+
+    -- Algorithm metadata (polymorphic join)
     all_key.algorithm,
     all_key.key_size,
     all_key.display_name,
     all_key.deprecated,
+
+    -- Subject details
     c.organization,
     c.organizational_unit,
     c.country,
     c.state_or_province,
     c.locality,
     c.email,
+
+    -- SANs (ordered array)
     COALESCE(
                     ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
                     FILTER (WHERE cs.san_value IS NOT NULL),
                     ARRAY[]::VARCHAR[]
     ) AS sans,
-    (ARRAY_AGG(cs.san_value ORDER BY cs.san_order))[1] AS common_name,
+
+    -- Common Name = first SAN (san_order = 0)
+    MIN(cs.san_value) FILTER (WHERE cs.san_order = 0) AS common_name,
+
+    -- Certificate metadata
     c.fingerprint,
     c.valid_from,
-    c.expires_on,
+    c.valid_to,
+
+    -- Derived metadata
+    (c.cert_pem IS NOT NULL) AS is_signed,
+    (NOW() > c.valid_to)      AS is_expired,
+
+    -- Audit timestamps
     c.created_on,
     c.updated_on,
     c.cert_uploaded_on,
     c.deleted_on
+
 FROM certificates c
          JOIN all_key_algorithms all_key
               ON c.key_algorithm_id = all_key.key_algorithm_id
          LEFT JOIN certificate_sans cs
                    ON c.id = cs.certificate_id
+
 GROUP BY
     c.id,
     c.csr_pem,
@@ -317,11 +337,12 @@ GROUP BY
     c.email,
     c.fingerprint,
     c.valid_from,
-    c.expires_on,
+    c.valid_to,
     c.created_on,
     c.updated_on,
     c.cert_uploaded_on,
     c.deleted_on;
+
 
 
 
@@ -490,7 +511,7 @@ SELECT c.id,
        c.email,
        c.fingerprint,
        c.valid_from,
-       c.expires_on,
+       c.valid_to,
        c.created_on,
        c.updated_on,
        c.cert_uploaded_on,
