@@ -46,6 +46,7 @@ utoipa-swagger-ui = { version = "9.0.2", features = [
 ] }
 utoipa-actix-web = { version = "0.1.2" }
 regex = "1.12.2"
+anyhow = "1.0.100"
 
 [dependencies.sqlx]
 version = "0.8.6"

@@ -18,6 +18,13 @@ profiles:
       host: http://127.0.0.1:9090
 
 requests:
+  certificates_folder:
+    name: Certificates
+    requests:
+      list_all_certificates:
+        name: Get All Certificates
+        method: GET
+        url: "{{ host }}/certificates"
   ecdsa_keys_folder:
     name: ECDSA Keys
     requests:

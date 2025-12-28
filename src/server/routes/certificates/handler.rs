@@ -1,4 +1,4 @@
-use super::dto::{CertificateResponseDto, CreateCertificateDto, PatchCertificateDto};
+use super::dto::{CertificateDetailsResponse, CertificateResponseDto, CreateCertificateDto, PatchCertificateDto};
 use crate::server::models::legacy_certificates::certificates_model::CertificateGenerationRequest;
 use crate::server::models::legacy_certificates::repository::CertificateRepository;
 use actix_web::{web, HttpResponse, Responder};
@@ -6,16 +6,17 @@ use sha2::{Digest, Sha256};
 use uuid::Uuid;
 use x509_parser::prelude::FromDer;
 use x509_parser::prelude::X509Certificate;
+use crate::server;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
 pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
-    let repo = CertificateRepository::new(pool.get_ref().clone());
+    let repo = server::models::certificates::repository::CertificateRepository::new(pool.get_ref().clone());
 
-    match repo.find_all_active().await {
+    match repo.find_all().await {
         Ok(certs) => {
             let dtos: Result<Vec<_>, _> = certs
                 .into_iter()
-                .map(CertificateResponseDto::try_from)
+                .map(CertificateDetailsResponse::try_from)
                 .collect();
             match dtos {
                 Ok(valid_dtos) => HttpResponse::Ok().json(valid_dtos),
@@ -38,7 +39,7 @@ pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
     }
 }
 
-#[tracing::instrument(name = "Create Certificate", skip(pool, payload))]
+/*#[tracing::instrument(name = "Create Certificate", skip(pool, payload))]
 pub async fn post_handler(
     pool: web::Data<sqlx::PgPool>,
     payload: web::Json<CreateCertificateDto>,
@@ -119,7 +120,7 @@ pub async fn post_handler(
             }))
         }
     }
-}
+}*/
 
 #[tracing::instrument(name = "Get Certificate by ID", skip(pool))]
 pub async fn get_by_id_handler(
@@ -127,12 +128,12 @@ pub async fn get_by_id_handler(
     path: web::Path<Uuid>,
 ) -> impl Responder {
     let cert_id = path.into_inner();
-    let repo = CertificateRepository::new(pool.get_ref().clone());
+    let repo = server::models::certificates::repository::CertificateRepository::new(pool.get_ref().clone());
 
     use std::convert::TryFrom;
 
     match repo.find_by_id(cert_id).await {
-        Ok(Some(cert)) => match CertificateResponseDto::try_from(cert) {
+        Ok(Some(cert)) => match CertificateDetailsResponse::try_from(cert) {
             Ok(dto) => HttpResponse::Ok().json(dto),
             Err(e) => {
                 tracing::error!("Failed to convert certificate: {}", e);
@@ -155,7 +156,7 @@ pub async fn get_by_id_handler(
     }
 }
 
-pub async fn put_handler() -> impl Responder {
+/*pub async fn put_handler() -> impl Responder {
     HttpResponse::MethodNotAllowed().json(serde_json::json!({
         "error": "PUT not supported. Use PATCH to upload signed certificate."
     }))
@@ -292,3 +293,4 @@ pub async fn delete_handler(
         }
     }
 }
+*/
