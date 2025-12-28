@@ -10,7 +10,7 @@ use std::net::{IpAddr, Ipv4Addr};
 /// assign a free one automatically).
 ///
 /// # Returns
-/// A `String` representing the base URL of the running server,
+/// A `String` representing the base URL of the running server.
 /// e.g. `"http://127.0.0.1:34567"`.
 ///
 /// # Panics

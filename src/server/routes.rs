@@ -2,6 +2,6 @@ pub mod certificates;
 
 pub mod health_check;
 pub mod rsa_keys;
-mod responses;
+pub mod responses;
 mod extractors;
 pub mod ecdsa_keys;
