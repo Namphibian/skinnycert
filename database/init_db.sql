@@ -382,11 +382,11 @@ SELECT
     katts.updated_on              AS tls_status_updated_on
 
 FROM key_algorithms ka
-         JOIN key_algorithm_types kat
+         LEFT JOIN key_algorithm_types kat
               ON ka.algorithm_type_id = kat.id
-         JOIN key_algorithm_statuses kas
+         LEFT JOIN key_algorithm_statuses kas
               ON ka.status_id = kas.id
-         JOIN key_algorithm_type_tls_statuses katts
+         LEFT JOIN key_algorithm_type_tls_statuses katts
               ON kat.tls_status_id = katts.id;
 
 COMMENT ON VIEW key_algorithm_info

@@ -284,7 +284,7 @@ async fn seed_ed25519_key_algorithm(
     ed25519_type_id: uuid::Uuid,
     statuses: &BTreeMap<&'static str, uuid::Uuid>,
 ) -> Result<(), sqlx::Error> {
-    let tls_secure = statuses["TLS_SECURE"];
+    let tls_secure = statuses["EXPERIMENTAL"];
 
     sqlx::query!(
         r#"
@@ -307,7 +307,7 @@ async fn seed_x25519_key_algorithm(
     x25519_type_id: uuid::Uuid,
     statuses: &BTreeMap<&'static str, uuid::Uuid>,
 ) -> Result<(), sqlx::Error> {
-    let tls_secure = statuses["TLS_SECURE"];
+    let tls_secure = statuses["FORBIDDEN"];
 
     sqlx::query!(
         r#"
