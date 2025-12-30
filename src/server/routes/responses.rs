@@ -1,4 +1,4 @@
-use crate::server::models::key_algorithm::KeyAlgorithm;
+use crate::server::models::key_algorithms::KeyAlgorithm;
 use crate::server::models::responses::{PatchResult, RepositoryError};
 use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};

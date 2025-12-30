@@ -10,7 +10,7 @@ use tracing::dispatcher;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-use crate::server::models::key_algorithms::openssl::seed_all_algorithms;
+use crate::server::models::key_algorithms::seed::seed_all_algorithms;
 
 const DEFAULT_PORT: u16 = 8080;
 const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;

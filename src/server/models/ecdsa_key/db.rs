@@ -1,4 +1,3 @@
-use crate::server::models::key_algorithm::KeyAlgorithm;
 use chrono::{DateTime, Utc};
 use openssl::ec::{EcGroup, EcKey};
 use openssl::hash::MessageDigest;
@@ -8,6 +7,7 @@ use openssl::sign::{Signer, Verifier};
 use sqlx::FromRow;
 use std::error::Error;
 use uuid::Uuid;
+use crate::server::models::key_algorithms::KeyAlgorithm;
 
 #[derive(Debug, FromRow)]
 pub struct EcdsaKeyAlgorithm {
