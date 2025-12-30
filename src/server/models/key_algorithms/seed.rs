@@ -15,6 +15,7 @@ unsafe extern "C" {
 }
 
 /// Extract builtin ECDSA curves from OpenSSL
+#[tracing::instrument(name = "START UP - Get OpenSSL Builtin Curves",level = tracing::Level::DEBUG)]
 pub fn builtin_curves() -> Vec<(Nid, String)> {
     unsafe {
         let count = EC_get_builtin_curves(std::ptr::null_mut(), 0);
@@ -42,6 +43,7 @@ pub fn builtin_curves() -> Vec<(Nid, String)> {
     }
 }
 
+#[tracing::instrument(name = "START UP - Extract Curve Size To Key Strength",level = tracing::Level::DEBUG)]
 fn extract_curve_size(comment: &str) -> Option<i32> {
     let re = regex::Regex::new(r"(\d+)\s*[- ]*bit").unwrap();
     re.captures(comment)
@@ -50,6 +52,7 @@ fn extract_curve_size(comment: &str) -> Option<i32> {
 }
 
 /// Load all key_algorithm_statuses into a BTreeMap<&'static str, Uuid>
+#[tracing::instrument(name = "START UP - Load Key Algorithm Statuses",level = tracing::Level::DEBUG)]
 async fn load_key_algorithm_statuses(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<BTreeMap<&'static str, uuid::Uuid>, sqlx::Error> {
@@ -82,6 +85,7 @@ async fn load_key_algorithm_statuses(
 }
 
 /// Seed TLS statuses (idempotent)
+#[tracing::instrument(name = "START UP - Seed TLS Statuses",level = tracing::Level::DEBUG)]
 async fn seed_tls_statuses(tx: &mut Transaction<'_, Postgres>) -> Result<(), sqlx::Error> {
     let statuses = [
         ("supported", "Usable for browser-trusted TLS certificates"),
@@ -106,6 +110,7 @@ async fn seed_tls_statuses(tx: &mut Transaction<'_, Postgres>) -> Result<(), sql
     Ok(())
 }
 
+#[tracing::instrument(name = "START UP - Get tls status id for mapping ",level = tracing::Level::DEBUG)]
 async fn get_tls_status_id(
     tx: &mut Transaction<'_, Postgres>,
     name: &str,
@@ -126,6 +131,7 @@ struct AlgorithmTypeIds {
 }
 
 /// Seed algorithm_types (idempotent)
+#[tracing::instrument(name = "START UP - Seed algorithm types",level = tracing::Level::DEBUG)]
 async fn seed_algorithm_types(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<AlgorithmTypeIds, sqlx::Error> {
