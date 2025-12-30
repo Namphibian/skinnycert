@@ -1,5 +1,4 @@
 use crate::server::logger::configure_bunyan_logger_format;
-use crate::server::models::ecdsa_key::openssl::configure_default_ecdsa_algorithm;
 use dotenvy::dotenv;
 use openssl::rand::rand_bytes;
 use sqlx::postgres::{PgPool, PgPoolOptions};
@@ -11,6 +10,7 @@ use tracing::dispatcher;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use crate::server::models::key_algorithms::openssl::seed_all_algorithms;
 
 const DEFAULT_PORT: u16 = 8080;
 const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;
@@ -208,7 +208,7 @@ pub async fn configure_environment(
 
     // --- Configure database connection ---
     let db_pool = configure_database().await?;
-    configure_default_ecdsa_algorithm(&db_pool)
+    seed_all_algorithms(&db_pool)
         .await
         .expect("Failed to configure ECDSA algorithms");
     tracing::info!("ECDSA algorithms configured");

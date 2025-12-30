@@ -1,5 +1,457 @@
--- Enable UUID extension
+-- ============================================================
+-- UUID extension
+-- ============================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ============================================================
+-- TLS Statuses
+-- ============================================================
+DROP TABLE IF EXISTS key_algorithm_type_tls_statuses CASCADE;
+
+CREATE TABLE key_algorithm_type_tls_statuses
+(
+    id          uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
+    name        VARCHAR(64)  NOT NULL,
+    description VARCHAR(256) NOT NULL,
+
+    created_on  timestamptz  NOT NULL DEFAULT NOW(),
+    updated_on  timestamptz
+);
+
+COMMENT ON TABLE key_algorithm_type_tls_statuses
+    IS 'TLS compatibility statuses for algorithm types (RSA, ECDSA, Ed25519, etc.). Determines whether an algorithm family is usable for browser-trusted TLS certificates.';
+
+COMMENT ON COLUMN key_algorithm_type_tls_statuses.id
+    IS 'Primary key for the TLS status entry.';
+
+COMMENT ON COLUMN key_algorithm_type_tls_statuses.name
+    IS 'Short identifier for the TLS status (e.g., supported, not_supported, experimental). Must be unique.';
+
+COMMENT ON COLUMN key_algorithm_type_tls_statuses.description
+    IS 'Human-readable explanation of the TLS status and its intended use.';
+
+COMMENT ON COLUMN key_algorithm_type_tls_statuses.created_on
+    IS 'Timestamp when this TLS status entry was created.';
+
+COMMENT ON COLUMN key_algorithm_type_tls_statuses.updated_on
+    IS 'Timestamp when this TLS status entry was last updated.';
+
+ALTER TABLE key_algorithm_type_tls_statuses
+    ADD CONSTRAINT unq_key_algorithm_type_tls_statuses_name UNIQUE (name);
+
+COMMENT ON CONSTRAINT unq_key_algorithm_type_tls_statuses_name ON key_algorithm_type_tls_statuses
+    IS 'Ensures that each TLS status name is unique.';
+
+
+-- Seed TLS statuses
+INSERT INTO key_algorithm_type_tls_statuses
+(
+    name,
+    description
+)
+VALUES
+    (
+        'supported',
+        'Usable for browser-trusted TLS certificates'
+    ),
+    (
+        'not_supported',
+        'Not usable for TLS certificates'
+    ),
+    (
+        'experimental',
+        'Future or internal-only algorithms'
+    );
+
+DROP TABLE IF EXISTS key_algorithm_statuses CASCADE;
+
+CREATE TABLE key_algorithm_statuses
+(
+    id          uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
+    name        VARCHAR(64)  NOT NULL,
+    description VARCHAR(256) NOT NULL,
+
+    created_on  timestamptz  NOT NULL DEFAULT NOW(),
+    updated_on  timestamptz
+);
+
+COMMENT ON TABLE key_algorithm_statuses
+    IS 'Operational statuses for specific key algorithms (e.g., RSA-2048, P-256). Indicates whether a concrete algorithm is TLS-secure, deprecated, internal-only, forbidden, etc.';
+
+COMMENT ON COLUMN key_algorithm_statuses.id
+    IS 'Primary key for the key algorithm status entry.';
+
+COMMENT ON COLUMN key_algorithm_statuses.name
+    IS 'Short identifier for the key algorithm status (e.g., tls_secure, tls_insecure, internal_only, deprecated, forbidden, experimental). Must be unique.';
+
+COMMENT ON COLUMN key_algorithm_statuses.description
+    IS 'Human-readable explanation of the operational status and its intended use.';
+
+COMMENT ON COLUMN key_algorithm_statuses.created_on
+    IS 'Timestamp when this key algorithm status entry was created.';
+
+COMMENT ON COLUMN key_algorithm_statuses.updated_on
+    IS 'Timestamp when this key algorithm status entry was last updated.';
+
+ALTER TABLE key_algorithm_statuses
+    ADD CONSTRAINT unq_key_algorithm_statuses_name UNIQUE (name);
+
+COMMENT ON CONSTRAINT unq_key_algorithm_statuses_name ON key_algorithm_statuses
+    IS 'Ensures that each key algorithm status name is unique.';
+
+
+INSERT INTO key_algorithm_statuses
+(
+    name,
+    description
+)
+VALUES
+    (
+        'tls_secure',
+        'Safe for browser-trusted TLS certificates'
+    ),
+    (
+        'tls_insecure',
+        'Cryptographically weak for TLS but still functional'
+    ),
+    (
+        'internal_only',
+        'Safe for internal PKI but not accepted by browsers'
+    ),
+    (
+        'deprecated',
+        'Supported but discouraged for new deployments'
+    ),
+    (
+        'forbidden',
+        'Must not be used'
+    ),
+    (
+        'experimental',
+        'Future or PQC algorithms not yet standardized'
+    );
+
+-- ============================================================
+-- Algorithm Types
+-- ============================================================
+DROP TABLE IF EXISTS key_algorithm_types CASCADE;
+
+CREATE TABLE key_algorithm_types
+(
+    id                uuid PRIMARY KEY     DEFAULT uuid_generate_v4(),
+    name              VARCHAR(64) NOT NULL,
+    description       VARCHAR(256),
+
+    requires_nid      BOOLEAN     NOT NULL DEFAULT FALSE,
+    requires_strength BOOLEAN     NOT NULL DEFAULT TRUE,
+
+    tls_status_id     uuid        NOT NULL,
+
+    created_on        timestamptz NOT NULL DEFAULT NOW(),
+    updated_on        timestamptz
+);
+
+COMMENT ON TABLE key_algorithm_types
+    IS 'Defines algorithm families (RSA, ECDSA, Ed25519, X25519). Each entry describes the behavior and TLS compatibility of an algorithm type.';
+
+COMMENT ON COLUMN key_algorithm_types.id
+    IS 'Primary key for the algorithm type entry.';
+
+COMMENT ON COLUMN key_algorithm_types.name
+    IS 'Short identifier for the algorithm type (e.g., RSA, ECDSA, Ed25519, X25519). Must be unique.';
+
+COMMENT ON COLUMN key_algorithm_types.description
+    IS 'Human-readable description of the algorithm type.';
+
+COMMENT ON COLUMN key_algorithm_types.requires_nid
+    IS 'Indicates whether this algorithm type requires an OpenSSL NID (true for ECDSA curves).';
+
+COMMENT ON COLUMN key_algorithm_types.requires_strength
+    IS 'Indicates whether this algorithm type requires a key strength value (true for RSA and ECDSA).';
+
+COMMENT ON COLUMN key_algorithm_types.tls_status_id
+    IS 'Foreign key referencing key_algorithm_type_tls_statuses.id, describing TLS compatibility for this algorithm type.';
+
+COMMENT ON COLUMN key_algorithm_types.created_on
+    IS 'Timestamp when this algorithm type entry was created.';
+
+COMMENT ON COLUMN key_algorithm_types.updated_on
+    IS 'Timestamp when this algorithm type entry was last updated.';
+
+ALTER TABLE key_algorithm_types
+    ADD CONSTRAINT unq_key_algorithm_types_name UNIQUE (name);
+
+COMMENT ON CONSTRAINT unq_key_algorithm_types_name ON key_algorithm_types
+    IS 'Ensures that each algorithm type name is unique.';
+
+ALTER TABLE key_algorithm_types
+    ADD CONSTRAINT fk_key_algorithm_types_tls_status
+        FOREIGN KEY (tls_status_id) REFERENCES key_algorithm_type_tls_statuses (id);
+
+COMMENT ON CONSTRAINT fk_key_algorithm_types_tls_status ON key_algorithm_types
+    IS 'Links each algorithm type to its TLS compatibility status.';
+
+
+-- Seed algorithm types
+INSERT INTO key_algorithm_types
+(
+    name,
+    description,
+    requires_nid,
+    requires_strength,
+    tls_status_id
+)
+SELECT 'RSA', 'Rivest–Shamir–Adleman', FALSE, TRUE, id
+FROM key_algorithm_type_tls_statuses
+WHERE name = 'supported'
+UNION ALL
+SELECT 'ECDSA', 'Elliptic Curve Digital Signature Algorithm', TRUE, TRUE, id
+FROM key_algorithm_type_tls_statuses
+WHERE name = 'supported'
+UNION ALL
+SELECT 'Ed25519', 'Edwards-curve Digital Signature Algorithm', FALSE, FALSE, id
+FROM key_algorithm_type_tls_statuses
+WHERE name = 'not_supported'
+UNION ALL
+SELECT 'X25519', 'Montgomery curve Diffie–Hellman key exchange', FALSE, FALSE, id
+FROM key_algorithm_type_tls_statuses
+WHERE name = 'not_supported';
+
+-- ============================================================
+-- Key Algorithms
+-- ============================================================
+DROP TABLE IF EXISTS key_algorithms CASCADE;
+
+CREATE TABLE key_algorithms
+(
+    id                uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
+    algorithm_type_id uuid         NOT NULL,
+    status_id         uuid         NOT NULL,
+    key_strength      INTEGER      NULL,
+    nid_value         INTEGER      NULL,
+    display_name      VARCHAR(256) NOT NULL,
+    created_on        timestamptz  NOT NULL DEFAULT NOW(),
+    updated_on        timestamptz
+);
+
+COMMENT ON TABLE key_algorithms
+    IS 'Concrete algorithm configurations (e.g., RSA-2048, P-256, Ed25519). Each row represents a specific usable algorithm instance.';
+
+COMMENT ON COLUMN key_algorithms.id
+    IS 'Primary key for the key algorithm entry.';
+
+COMMENT ON COLUMN key_algorithms.algorithm_type_id
+    IS 'Foreign key referencing key_algorithm_types.id, identifying the algorithm family (RSA, ECDSA, Ed25519, etc.).';
+
+COMMENT ON COLUMN key_algorithms.status_id
+    IS 'Foreign key referencing key_algorithm_statuses.id, describing the operational status of this specific algorithm (e.g., tls_secure, deprecated, internal_only).';
+
+COMMENT ON COLUMN key_algorithms.key_strength
+    IS 'Key strength value (e.g., RSA bit length or ECDSA curve size). NULL for algorithms that do not use strength.';
+
+COMMENT ON COLUMN key_algorithms.nid_value
+    IS 'OpenSSL NID for ECDSA curves. NULL for non-ECDSA algorithms.';
+
+COMMENT ON COLUMN key_algorithms.display_name
+    IS 'Human-readable name for the algorithm instance (e.g., "RSA 2048-bit", "NIST P-256").';
+
+COMMENT ON COLUMN key_algorithms.created_on
+    IS 'Timestamp when this key algorithm entry was created.';
+
+COMMENT ON COLUMN key_algorithms.updated_on
+    IS 'Timestamp when this key algorithm entry was last updated.';
+
+
+-- ============================================================
+-- Foreign Keys
+-- ============================================================
+
+ALTER TABLE key_algorithms
+    ADD CONSTRAINT fk_key_algorithms_algorithm_type
+        FOREIGN KEY (algorithm_type_id)
+            REFERENCES key_algorithm_types (id);
+
+COMMENT ON CONSTRAINT fk_key_algorithms_algorithm_type ON key_algorithms
+    IS 'Links each key algorithm to its algorithm type definition.';
+
+ALTER TABLE key_algorithms
+    ADD CONSTRAINT fk_key_algorithms_status
+        FOREIGN KEY (status_id)
+            REFERENCES key_algorithm_statuses (id);
+
+COMMENT ON CONSTRAINT fk_key_algorithms_status ON key_algorithms
+    IS 'Links each key algorithm to its operational status classification.';
+
+
+-- ============================================================
+-- Validation Trigger (cross-table rules)
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION validate_key_algorithm()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    at RECORD;
+BEGIN
+    SELECT requires_nid, requires_strength, name
+    INTO at
+    FROM key_algorithm_types
+    WHERE id = new.algorithm_type_id;
+
+    -- Enforce nid_value rules
+    IF at.requires_nid AND new.nid_value IS NULL THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            MESSAGE = 'Algorithm type requires nid_value but none was provided';
+    END IF;
+
+    IF NOT at.requires_nid AND new.nid_value IS NOT NULL THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            MESSAGE = 'Algorithm type forbids nid_value but one was provided';
+    END IF;
+
+    -- Enforce key_strength rules
+    IF at.requires_strength AND new.key_strength IS NULL THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            MESSAGE = 'Algorithm type requires key_strength but none was provided';
+    END IF;
+
+    -- RSA-specific rule: key size must be a multiple of 1024
+    IF at.name = 'RSA' AND new.key_strength IS NOT NULL AND new.key_strength % 1024 <> 0 THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            MESSAGE = FORMAT(
+                    'RSA key size (%s) must be a multiple of 1024',
+                    new.key_strength
+                      );
+    END IF;
+
+    RETURN new;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION validate_key_algorithm()
+    IS 'Validates cross-table rules for key algorithms, enforcing NID requirements, strength requirements, and RSA-specific constraints.';
+
+CREATE TRIGGER key_algorithms_validate
+    BEFORE INSERT OR UPDATE
+    ON key_algorithms
+    FOR EACH ROW
+EXECUTE FUNCTION validate_key_algorithm();
+
+COMMENT ON TRIGGER key_algorithms_validate ON key_algorithms
+    IS 'Ensures that inserted or updated key algorithms comply with algorithm type rules.';
+
+DROP VIEW IF EXISTS key_algorithm_info CASCADE;
+CREATE OR REPLACE VIEW key_algorithm_info AS
+SELECT
+    -- key_algorithms
+    ka.id                         AS key_algorithm_id,
+    ka.algorithm_type_id          AS key_algorithm_type_id,
+    ka.status_id                  AS key_algorithm_status_id,
+    ka.key_strength               AS key_algorithm_strength,
+    ka.nid_value                  AS key_algorithm_nid_value,
+    ka.display_name               AS key_algorithm_display_name,
+    ka.created_on                 AS key_algorithm_created_on,
+    ka.updated_on                 AS key_algorithm_updated_on,
+
+    -- key_algorithm_types
+    kat.id                        AS algorithm_type_id,
+    kat.name                      AS algorithm_type_name,
+    kat.description               AS algorithm_type_description,
+    kat.requires_nid              AS algorithm_type_requires_nid,
+    kat.requires_strength         AS algorithm_type_requires_strength,
+    kat.tls_status_id             AS algorithm_type_tls_status_id,
+    kat.created_on                AS algorithm_type_created_on,
+    kat.updated_on                AS algorithm_type_updated_on,
+
+    -- key_algorithm_statuses
+    kas.id                        AS status_id,
+    kas.name                      AS status_name,
+    kas.description               AS status_description,
+    kas.created_on                AS status_created_on,
+    kas.updated_on                AS status_updated_on,
+
+    -- key_algorithm_type_tls_statuses
+    katts.id                      AS tls_status_id,
+    katts.name                    AS tls_status_name,
+    katts.description             AS tls_status_description,
+    katts.created_on              AS tls_status_created_on,
+    katts.updated_on              AS tls_status_updated_on
+
+FROM key_algorithms ka
+         JOIN key_algorithm_types kat
+              ON ka.algorithm_type_id = kat.id
+         JOIN key_algorithm_statuses kas
+              ON ka.status_id = kas.id
+         JOIN key_algorithm_type_tls_statuses katts
+              ON kat.tls_status_id = katts.id;
+
+COMMENT ON VIEW key_algorithm_info
+    IS 'Flattened view combining key algorithms, algorithm types, operational statuses, and TLS compatibility metadata.';
+
+-- key_algorithms columns
+COMMENT ON COLUMN key_algorithm_info.key_algorithm_id
+    IS 'Primary key of the key_algorithms entry.';
+COMMENT ON COLUMN key_algorithm_info.key_algorithm_type_id
+    IS 'Foreign key referencing key_algorithm_types.id.';
+COMMENT ON COLUMN key_algorithm_info.key_algorithm_status_id
+    IS 'Foreign key referencing key_algorithm_statuses.id.';
+COMMENT ON COLUMN key_algorithm_info.key_algorithm_strength
+    IS 'Key strength (e.g., RSA bit length or ECDSA curve size).';
+COMMENT ON COLUMN key_algorithm_info.key_algorithm_nid_value
+    IS 'OpenSSL NID for ECDSA curves; NULL for non-ECDSA algorithms.';
+COMMENT ON COLUMN key_algorithm_info.key_algorithm_display_name
+    IS 'Human-readable name for the key algorithm.';
+COMMENT ON COLUMN key_algorithm_info.key_algorithm_created_on
+    IS 'Timestamp when the key algorithm entry was created.';
+COMMENT ON COLUMN key_algorithm_info.key_algorithm_updated_on
+    IS 'Timestamp when the key algorithm entry was last updated.';
+
+-- key_algorithm_types columns
+COMMENT ON COLUMN key_algorithm_info.algorithm_type_id
+    IS 'Primary key of the key_algorithm_types entry.';
+COMMENT ON COLUMN key_algorithm_info.algorithm_type_name
+    IS 'Name of the algorithm type (RSA, ECDSA, Ed25519, etc.).';
+COMMENT ON COLUMN key_algorithm_info.algorithm_type_description
+    IS 'Human-readable description of the algorithm type.';
+COMMENT ON COLUMN key_algorithm_info.algorithm_type_requires_nid
+    IS 'Whether this algorithm type requires an OpenSSL NID.';
+COMMENT ON COLUMN key_algorithm_info.algorithm_type_requires_strength
+    IS 'Whether this algorithm type requires a key strength value.';
+COMMENT ON COLUMN key_algorithm_info.algorithm_type_tls_status_id
+    IS 'Foreign key referencing key_algorithm_type_tls_statuses.id.';
+COMMENT ON COLUMN key_algorithm_info.algorithm_type_created_on
+    IS 'Timestamp when the algorithm type entry was created.';
+COMMENT ON COLUMN key_algorithm_info.algorithm_type_updated_on
+    IS 'Timestamp when the algorithm type entry was last updated.';
+
+-- key_algorithm_statuses columns
+COMMENT ON COLUMN key_algorithm_info.status_id
+    IS 'Primary key of the key_algorithm_statuses entry.';
+COMMENT ON COLUMN key_algorithm_info.status_name
+    IS 'Operational status name (TLS_SECURE, TLS_INSECURE, etc.).';
+COMMENT ON COLUMN key_algorithm_info.status_description
+    IS 'Human-readable description of the operational status.';
+COMMENT ON COLUMN key_algorithm_info.status_created_on
+    IS 'Timestamp when the status entry was created.';
+COMMENT ON COLUMN key_algorithm_info.status_updated_on
+    IS 'Timestamp when the status entry was last updated.';
+
+-- key_algorithm_type_tls_statuses columns
+COMMENT ON COLUMN key_algorithm_info.tls_status_id
+    IS 'Primary key of the key_algorithm_type_tls_statuses entry.';
+COMMENT ON COLUMN key_algorithm_info.tls_status_name
+    IS 'TLS compatibility status name (supported, not_supported, etc.).';
+COMMENT ON COLUMN key_algorithm_info.tls_status_description
+    IS 'Human-readable description of the TLS compatibility status.';
+COMMENT ON COLUMN key_algorithm_info.tls_status_created_on
+    IS 'Timestamp when the TLS status entry was created.';
+COMMENT ON COLUMN key_algorithm_info.tls_status_updated_on
+    IS 'Timestamp when the TLS status entry was last updated.';
+
 -- ============================================================
 -- Function to set updated_on on inserts/updates
 -- ============================================================
@@ -11,30 +463,8 @@ BEGIN
     RETURN new;
 END;
 $$ LANGUAGE plpgsql;
--- ============================================================
--- Parent table: key_algorithms (polymorphic base)
--- ============================================================
-DROP TABLE IF EXISTS key_algorithms CASCADE;
-CREATE TABLE key_algorithms
-(
-    id         uuid PRIMARY KEY     DEFAULT uuid_generate_v4(),
-    algorithm  TEXT        NOT NULL, -- 'RSA', 'ECDSA', future types
-    created_on timestamptz NOT NULL DEFAULT NOW(),
-    updated_on timestamptz NULL,     -- auto-managed by trigger
-    deprecated BOOLEAN     NOT NULL DEFAULT FALSE
-);
--- ============================================================
--- Child table: RSA (inherits key_algorithms)
--- ============================================================
-DROP TABLE IF EXISTS rsa_key_algorithm CASCADE;
-CREATE TABLE rsa_key_algorithm
-(
-    key_size     INTEGER NOT NULL, -- e.g., 2048, 3072, 4096
-    display_name TEXT GENERATED ALWAYS AS (
-        'RSA ' || key_size || '-bit'
-        ) STORED,
-    CONSTRAINT unique_rsa_key_size UNIQUE (key_size)
-) INHERITS (key_algorithms);
+
+
 -- Trigger to enforce the 'algorithm' column equals 'RSA' on child inserts/updates
 CREATE OR REPLACE FUNCTION rsa_insert_trigger()
     RETURNS TRIGGER AS
@@ -74,41 +504,7 @@ CREATE TRIGGER rsa_before_update
     ON rsa_key_algorithm
     FOR EACH ROW
 EXECUTE FUNCTION set_updated_on();
--- INSERT Some RSA keys:
-INSERT INTO rsa_key_algorithm
-(
-    algorithm,
-    key_size
-)
-VALUES
-    (
-        'RSA',
-        2048
 
-    ),
-    (
-        'RSA',
-        3072
-
-    ),
-    (
-        'RSA',
-        4096
-
-    );
--- ============================================================
--- Child table: ECDSA
--- ============================================================
-DROP TABLE IF EXISTS ecdsa_key_algorithm CASCADE;
-CREATE TABLE ecdsa_key_algorithm
-(
-    -- Specific ECDSA parameters
-    display_name TEXT,             -- e.g., 'NIST P-256'
-    nid_value    INTEGER NOT NULL, -- OpenSSL internal numeric ID
-    CONSTRAINT unique_nid_value UNIQUE (nid_value)
-) INHERITS (key_algorithms);
-ALTER TABLE ecdsa_key_algorithm
-    ADD COLUMN curve_size INTEGER NOT NULL DEFAULT 0;
 
 -- Trigger to enforce the 'algorithm' column equals 'ECDSA' on child inserts/updates
 CREATE OR REPLACE FUNCTION ecdsa_insert_trigger()
@@ -263,53 +659,52 @@ FROM ecdsa_key_algorithm ecdsa;
 DROP VIEW IF EXISTS certificate_details CASCADE;
 
 CREATE OR REPLACE VIEW certificate_details AS
-SELECT
-    c.id,
-    c.csr_pem,
-    c.cert_pem,
-    c.key_pem,
-    c.public_key_pem,
-    c.chain_pem,
-    c.key_algorithm_id,
+SELECT c.id,
+       c.csr_pem,
+       c.cert_pem,
+       c.key_pem,
+       c.public_key_pem,
+       c.chain_pem,
+       c.key_algorithm_id,
 
-    -- Algorithm metadata (polymorphic join)
-    all_key.algorithm,
-    all_key.key_size,
-    all_key.display_name,
-    all_key.deprecated,
+       -- Algorithm metadata (polymorphic join)
+       all_key.algorithm,
+       all_key.key_size,
+       all_key.display_name,
+       all_key.deprecated,
 
-    -- Subject details
-    c.organization,
-    c.organizational_unit,
-    c.country,
-    c.state_or_province,
-    c.locality,
-    c.email,
+       -- Subject details
+       c.organization,
+       c.organizational_unit,
+       c.country,
+       c.state_or_province,
+       c.locality,
+       c.email,
 
-    -- SANs (ordered array)
-    COALESCE(
-                    ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
-                    FILTER (WHERE cs.san_value IS NOT NULL),
-                    ARRAY[]::VARCHAR[]
-    ) AS sans,
+       -- SANs (ordered array)
+       COALESCE(
+                       ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
+                       FILTER (WHERE cs.san_value IS NOT NULL),
+                       ARRAY []::VARCHAR[]
+       )                                                 AS sans,
 
-    -- Common Name = first SAN (san_order = 0)
-    MIN(cs.san_value) FILTER (WHERE cs.san_order = 0) AS common_name,
+       -- Common Name = first SAN (san_order = 0)
+       MIN(cs.san_value) FILTER (WHERE cs.san_order = 0) AS common_name,
 
-    -- Certificate metadata
-    c.fingerprint,
-    c.valid_from,
-    c.valid_to,
+       -- Certificate metadata
+       c.fingerprint,
+       c.valid_from,
+       c.valid_to,
 
-    -- Derived metadata
-    (c.cert_pem IS NOT NULL) AS is_signed,
-    (NOW() > c.valid_to)      AS is_expired,
+       -- Derived metadata
+       (c.cert_pem IS NOT NULL)                          AS is_signed,
+       (NOW() > c.valid_to)                              AS is_expired,
 
-    -- Audit timestamps
-    c.created_on,
-    c.updated_on,
-    c.cert_uploaded_on,
-    c.deleted_on
+       -- Audit timestamps
+       c.created_on,
+       c.updated_on,
+       c.cert_uploaded_on,
+       c.deleted_on
 
 FROM certificates c
          JOIN all_key_algorithms all_key
@@ -317,33 +712,30 @@ FROM certificates c
          LEFT JOIN certificate_sans cs
                    ON c.id = cs.certificate_id
 
-GROUP BY
-    c.id,
-    c.csr_pem,
-    c.cert_pem,
-    c.key_pem,
-    c.public_key_pem,
-    c.chain_pem,
-    c.key_algorithm_id,
-    all_key.algorithm,
-    all_key.key_size,
-    all_key.display_name,
-    all_key.deprecated,
-    c.organization,
-    c.organizational_unit,
-    c.country,
-    c.state_or_province,
-    c.locality,
-    c.email,
-    c.fingerprint,
-    c.valid_from,
-    c.valid_to,
-    c.created_on,
-    c.updated_on,
-    c.cert_uploaded_on,
-    c.deleted_on;
-
-
+GROUP BY c.id,
+         c.csr_pem,
+         c.cert_pem,
+         c.key_pem,
+         c.public_key_pem,
+         c.chain_pem,
+         c.key_algorithm_id,
+         all_key.algorithm,
+         all_key.key_size,
+         all_key.display_name,
+         all_key.deprecated,
+         c.organization,
+         c.organizational_unit,
+         c.country,
+         c.state_or_province,
+         c.locality,
+         c.email,
+         c.fingerprint,
+         c.valid_from,
+         c.valid_to,
+         c.created_on,
+         c.updated_on,
+         c.cert_uploaded_on,
+         c.deleted_on;
 
 
 

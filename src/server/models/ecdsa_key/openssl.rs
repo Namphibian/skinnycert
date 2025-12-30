@@ -70,70 +70,70 @@ pub struct EcBuiltinCurve {
 unsafe extern "C" {
     fn EC_get_builtin_curves(r: *mut EcBuiltinCurve, n: c_int) -> c_int;
 }
-
-fn extract_curve_size(comment: &str) -> Option<i32> {
-    let re = regex::Regex::new(r"(\d+)\s*bit").unwrap();
-    re.captures(comment)
-        .and_then(|cap| cap.get(1))
-        .and_then(|m| m.as_str().parse::<i32>().ok())
-}
-
-/// Returns all builtin EC curves from OpenSSL
-pub fn builtin_curves() -> Vec<(Nid, String)> {
-    unsafe {
-        // First call with null to get the count
-        let count = EC_get_builtin_curves(std::ptr::null_mut(), 0);
-        let mut curves: Vec<EcBuiltinCurve> = Vec::with_capacity(count as usize);
-
-        // Fill the vector
-        let got = EC_get_builtin_curves(curves.as_mut_ptr(), count);
-        assert_eq!(got, count);
-
-        curves.set_len(count as usize);
-
-        curves
-            .into_iter()
-            .map(|c| {
-                let nid = Nid::from_raw(c.nid);
-                let comment = if c.comment.is_null() {
-                    "".to_string()
-                } else {
-                    std::ffi::CStr::from_ptr(c.comment)
-                        .to_string_lossy()
-                        .into_owned()
-                };
-                (nid, comment)
-            })
-            .collect()
-    }
-}
-
-// --- Seeding function ---
-
-pub async fn configure_default_ecdsa_algorithm(pool: &PgPool) -> Result<(), sqlx::Error> {
-    let curves = builtin_curves();
-
-    for (nid, comment) in curves {
-        let nid_value = nid.as_raw();
-        let display_name = comment.clone();
-        let curve_size = extract_curve_size(&comment).unwrap_or(0);
-
-        sqlx::query!(
-            r#"
-            INSERT INTO ecdsa_key_algorithm (algorithm, nid_value, display_name, curve_size)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (nid_value) DO UPDATE
-            SET display_name = EXCLUDED.display_name,
-                curve_size   = EXCLUDED.curve_size
-            "#,
-            "ECDSA",
-            nid_value,
-            display_name,
-            curve_size,
-        )
-        .execute(pool)
-        .await?;
-    }
-
-    Ok(())
-}
+//
+// fn extract_curve_size(comment: &str) -> Option<i32> {
+//     let re = regex::Regex::new(r"(\d+)\s*bit").unwrap();
+//     re.captures(comment)
+//         .and_then(|cap| cap.get(1))
+//         .and_then(|m| m.as_str().parse::<i32>().ok())
+// }
+//
+// /// Returns all builtin EC curves from OpenSSL
+// pub fn builtin_curves() -> Vec<(Nid, String)> {
+//     unsafe {
+//         // First call with null to get the count
+//         let count = EC_get_builtin_curves(std::ptr::null_mut(), 0);
+//         let mut curves: Vec<EcBuiltinCurve> = Vec::with_capacity(count as usize);
+//
+//         // Fill the vector
+//         let got = EC_get_builtin_curves(curves.as_mut_ptr(), count);
+//         assert_eq!(got, count);
+//
+//         curves.set_len(count as usize);
+//
+//         curves
+//             .into_iter()
+//             .map(|c| {
+//                 let nid = Nid::from_raw(c.nid);
+//                 let comment = if c.comment.is_null() {
+//                     "".to_string()
+//                 } else {
+//                     std::ffi::CStr::from_ptr(c.comment)
+//                         .to_string_lossy()
+//                         .into_owned()
+//                 };
+//                 (nid, comment)
+//             })
+//             .collect()
+//     }
+// }
+//
+// // --- Seeding function ---
+//
+// pub async fn configure_default_ecdsa_algorithm(pool: &PgPool) -> Result<(), sqlx::Error> {
+//     let curves = builtin_curves();
+//
+//     for (nid, comment) in curves {
+//         let nid_value = nid.as_raw();
+//         let display_name = comment.clone();
+//         let curve_size = extract_curve_size(&comment).unwrap_or(0);
+//
+//         sqlx::query!(
+//             r#"
+//             INSERT INTO ecdsa_key_algorithm (algorithm, nid_value, display_name, curve_size)
+//             VALUES ($1, $2, $3, $4)
+//             ON CONFLICT (nid_value) DO UPDATE
+//             SET display_name = EXCLUDED.display_name,
+//                 curve_size   = EXCLUDED.curve_size
+//             "#,
+//             "ECDSA",
+//             nid_value,
+//             display_name,
+//             curve_size,
+//         )
+//         .execute(pool)
+//         .await?;
+//     }
+//
+//     Ok(())
+// }
