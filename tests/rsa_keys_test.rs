@@ -3,7 +3,7 @@ mod common;
 use openssl::pkey::PKey;
 use openssl::rsa::Rsa;
 use uuid::Uuid;
-use skinnycert::server::models::key_algorithms::KeyAlgorithm;
+use skinnycert::server::models::key_algorithms::KeyPair;
 use skinnycert::server::models::rsa_key::db::RSAKeyAlgorithm;
 
 #[test]

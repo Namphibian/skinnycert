@@ -1,7 +1,7 @@
 use actix_web::ResponseError;
 use actix_web::http::StatusCode;
 use serde::{Deserialize, Serialize};
-use skinnycert::server::models::key_algorithms::KeyAlgorithm;
+use skinnycert::server::models::key_algorithms::KeyPair;
 use skinnycert::server::models::responses::{PatchResult, RepositoryError};
 use skinnycert::server::routes::responses::{
     KeyPairResponse, key_pair_response, to_patch_response, to_response, to_response_list,
@@ -180,7 +180,7 @@ async fn test_to_patch_response_not_found() {
 }
 
 struct MockKeyAlg;
-impl KeyAlgorithm for MockKeyAlg {
+impl KeyPair for MockKeyAlg {
     fn generate_key_pair(&self) -> Result<(String, String), Box<dyn std::error::Error>> {
         Ok(("priv".into(), "pub".into()))
     }
