@@ -2,9 +2,9 @@ use std::error::Error;
 
 pub mod db;
 pub mod seed;
-mod repository;
+pub mod repository;
 
-pub trait KeyAlgorithm {
+pub trait KeyPair {
     fn generate_key_pair(&self) -> Result<(String, String), Box<dyn std::error::Error>>;
     fn verify_key_pair(
         &self,

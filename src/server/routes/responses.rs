@@ -1,4 +1,4 @@
-use crate::server::models::key_algorithms::KeyAlgorithm;
+use crate::server::models::key_algorithms::{ KeyPair};
 use crate::server::models::responses::{PatchResult, RepositoryError};
 use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
@@ -180,7 +180,7 @@ pub fn key_pair_response<M, E>(
     not_found_msg: &'static str,
 ) -> HttpResponse
 where
-    M: KeyAlgorithm,
+    M: KeyPair,
     E: Into<RepositoryError> + std::fmt::Display,
 {
     match result {

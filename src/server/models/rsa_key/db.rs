@@ -85,7 +85,7 @@ use openssl::sign::{Signer, Verifier};
 use sqlx::FromRow;
 use std::error::Error;
 use uuid::Uuid;
-use crate::server::models::key_algorithms::KeyAlgorithm;
+use crate::server::models::key_algorithms::{KeyPair};
 
 #[derive(Debug, FromRow)]
 pub struct RSAKeyAlgorithm {
@@ -98,7 +98,7 @@ pub struct RSAKeyAlgorithm {
     pub updated_on: Option<DateTime<Utc>>,
 }
 
-impl KeyAlgorithm for RSAKeyAlgorithm {
+impl KeyPair for RSAKeyAlgorithm {
     fn generate_key_pair(&self) -> Result<(String, String), Box<dyn Error>> {
         let rsa = Rsa::generate(self.key_size as u32)?;
         let pkey = PKey::from_rsa(rsa)?;

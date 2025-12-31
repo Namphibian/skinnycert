@@ -25,21 +25,29 @@ requests:
         name: Get All Certificates
         method: GET
         url: "{{ host }}/certificates"
-  ecdsa_keys_folder:
-    name: ECDSA Keys
+  keys_folder:
+    name: Key Algorithm
     requests:
-      list_all_ecdsa:
+      list_all_algo:
         name: List All
         method: GET
-        url: "{{ host }}/keys/ecdsa"
-      get_ecdsa_by_id:
+        url: "{{ host }}/keys"
+      list_all_rsa_algo:
+        name: List RSA Keys
+        method: GET
+        url: "{{ host }}/keys?algorithm_type=rsa"
+      list_all_ecdsa_algo:
+        name: List All ECDSA Keys
+        method: GET
+        url: "{{ host }}/keys?algorithm_type=ecdsa"
+      get_key_by_id:
         name: Get By ID
         method: GET
-        url: "{{ host }}/keys/ecdsa/dd0b6bfd-4c48-4874-b260-b913e717aae1"
-      generate_ecdsa_key_pair:
+        url: "{{ host }}/keys/19747055-bafb-4e78-a005-002eb49cc1b3"
+      generate_key_pair_by_id:
         name: Generate key pair.
         method: GET
-        url: "{{ host }}/keys/ecdsa/dd0b6bfd-4c48-4874-b260-b913e717aae1/keypair"
+        url: "{{ host }}/keys/19747055-bafb-4e78-a005-002eb49cc1b3/keypair"
   rsa_keys_folder:
     name: RSA Keys
     requests:

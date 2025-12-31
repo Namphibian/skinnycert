@@ -282,6 +282,10 @@ ALTER TABLE key_algorithms
 COMMENT ON CONSTRAINT fk_key_algorithms_status ON key_algorithms
     IS 'Links each key algorithm to its operational status classification.';
 
+CREATE UNIQUE INDEX udix_key_algorithms_key_strength_algorithm_type_id_nid_value
+    ON key_algorithms (key_strength, algorithm_type_id, nid_value)
+    NULLS NOT DISTINCT;
+
 
 -- ============================================================
 -- Validation Trigger (cross-table rules)
@@ -348,46 +352,46 @@ DROP VIEW IF EXISTS key_algorithm_info CASCADE;
 CREATE OR REPLACE VIEW key_algorithm_info AS
 SELECT
     -- key_algorithms
-    ka.id                         AS key_algorithm_id,
-    ka.algorithm_type_id          AS key_algorithm_type_id,
-    ka.status_id                  AS key_algorithm_status_id,
-    ka.key_strength               AS key_algorithm_strength,
-    ka.nid_value                  AS key_algorithm_nid_value,
-    ka.display_name               AS key_algorithm_display_name,
-    ka.created_on                 AS key_algorithm_created_on,
-    ka.updated_on                 AS key_algorithm_updated_on,
+    ka.id                 AS key_algorithm_id,
+    ka.algorithm_type_id  AS key_algorithm_type_id,
+    ka.status_id          AS key_algorithm_status_id,
+    ka.key_strength       AS key_algorithm_strength,
+    ka.nid_value          AS key_algorithm_nid_value,
+    ka.display_name       AS key_algorithm_display_name,
+    ka.created_on         AS key_algorithm_created_on,
+    ka.updated_on         AS key_algorithm_updated_on,
 
     -- key_algorithm_types
-    kat.id                        AS algorithm_type_id,
-    kat.name                      AS algorithm_type_name,
-    kat.description               AS algorithm_type_description,
-    kat.requires_nid              AS algorithm_type_requires_nid,
-    kat.requires_strength         AS algorithm_type_requires_strength,
-    kat.tls_status_id             AS algorithm_type_tls_status_id,
-    kat.created_on                AS algorithm_type_created_on,
-    kat.updated_on                AS algorithm_type_updated_on,
+    kat.id                AS algorithm_type_id,
+    kat.name              AS algorithm_type_name,
+    kat.description       AS algorithm_type_description,
+    kat.requires_nid      AS algorithm_type_requires_nid,
+    kat.requires_strength AS algorithm_type_requires_strength,
+    kat.tls_status_id     AS algorithm_type_tls_status_id,
+    kat.created_on        AS algorithm_type_created_on,
+    kat.updated_on        AS algorithm_type_updated_on,
 
     -- key_algorithm_statuses
-    kas.id                        AS status_id,
-    kas.name                      AS status_name,
-    kas.description               AS status_description,
-    kas.created_on                AS status_created_on,
-    kas.updated_on                AS status_updated_on,
+    kas.id                AS status_id,
+    kas.name              AS status_name,
+    kas.description       AS status_description,
+    kas.created_on        AS status_created_on,
+    kas.updated_on        AS status_updated_on,
 
     -- key_algorithm_type_tls_statuses
-    katts.id                      AS tls_status_id,
-    katts.name                    AS tls_status_name,
-    katts.description             AS tls_status_description,
-    katts.created_on              AS tls_status_created_on,
-    katts.updated_on              AS tls_status_updated_on
+    katts.id              AS tls_status_id,
+    katts.name            AS tls_status_name,
+    katts.description     AS tls_status_description,
+    katts.created_on      AS tls_status_created_on,
+    katts.updated_on      AS tls_status_updated_on
 
 FROM key_algorithms ka
          LEFT JOIN key_algorithm_types kat
-              ON ka.algorithm_type_id = kat.id
-         LEFT JOIN key_algorithm_statuses kas
-              ON ka.status_id = kas.id
-         LEFT JOIN key_algorithm_type_tls_statuses katts
-              ON kat.tls_status_id = katts.id;
+                   ON ka.algorithm_type_id = kat.id
+         INNER JOIN key_algorithm_statuses kas
+                    ON ka.status_id = kas.id
+         INNER JOIN key_algorithm_type_tls_statuses katts
+                    ON kat.tls_status_id = katts.id;
 
 COMMENT ON VIEW key_algorithm_info
     IS 'Flattened view combining key algorithms, algorithm types, operational statuses, and TLS compatibility metadata.';

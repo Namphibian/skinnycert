@@ -7,7 +7,7 @@ use openssl::sign::{Signer, Verifier};
 use sqlx::FromRow;
 use std::error::Error;
 use uuid::Uuid;
-use crate::server::models::key_algorithms::KeyAlgorithm;
+use crate::server::models::key_algorithms::KeyPair;
 
 #[derive(Debug, FromRow)]
 pub struct EcdsaKeyAlgorithm {
@@ -20,7 +20,7 @@ pub struct EcdsaKeyAlgorithm {
     pub created_on: Option<DateTime<Utc>>,
     pub updated_on: Option<DateTime<Utc>>,
 }
-impl KeyAlgorithm for EcdsaKeyAlgorithm {
+impl KeyPair for EcdsaKeyAlgorithm {
     fn generate_key_pair(&self) -> Result<(String, String), Box<dyn std::error::Error>> {
         let nid = Nid::from_raw(self.nid_value);
         let group = EcGroup::from_curve_name(nid)?;

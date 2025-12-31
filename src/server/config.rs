@@ -210,8 +210,8 @@ pub async fn configure_environment(
     let db_pool = configure_database().await?;
     seed_all_algorithms(&db_pool)
         .await
-        .expect("Failed to configure ECDSA algorithms");
-    tracing::info!("ECDSA algorithms configured");
+        .expect("Failed to configure key algorithms");
+    tracing::info!("All key algorithms configured");
     // --- Bind the listener (IPv6 first, fallback to IPv4) ---
     let listener = bind_listener(&resolved_address.to_string(), resolved_port)
         .map_err(|e| format!("Failed to bind listener: {}", e))?;
