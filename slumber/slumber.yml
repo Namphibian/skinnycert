@@ -43,11 +43,11 @@ requests:
       get_key_by_id:
         name: Get By ID
         method: GET
-        url: "{{ host }}/keys/19747055-bafb-4e78-a005-002eb49cc1b3"
+        url: "{{ host }}/keys/c62abdb7-4d7b-43da-9e95-5f1f8b814ad9"
       generate_key_pair_by_id:
         name: Generate key pair.
         method: GET
-        url: "{{ host }}/keys/19747055-bafb-4e78-a005-002eb49cc1b3/keypair"
+        url: "{{ host }}/keys/c62abdb7-4d7b-43da-9e95-5f1f8b814ad9/keypair"
   rsa_keys_folder:
     name: RSA Keys
     requests:
