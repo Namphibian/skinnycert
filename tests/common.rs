@@ -1,5 +1,5 @@
 use skinnycert::server::config::{
-    ServerListeningAddress, ServerPort, configure_environment,
+    configure_environment, ServerListeningAddress, ServerPort,
 };
 use std::net::{IpAddr, Ipv4Addr};
 

@@ -1,8 +1,8 @@
 use openssl::nid::Nid;
 use openssl::pkey::PKey;
 use skinnycert::server::models::ecdsa_key::db::EcdsaKeyAlgorithm;
-use uuid::Uuid;
 use skinnycert::server::models::key_algorithms::KeyPair;
+use uuid::Uuid;
 
 #[test]
 fn test_generate_ecdsa_key_pair() {

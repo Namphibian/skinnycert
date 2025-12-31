@@ -2,9 +2,9 @@ mod common;
 
 use openssl::pkey::PKey;
 use openssl::rsa::Rsa;
-use uuid::Uuid;
 use skinnycert::server::models::key_algorithms::KeyPair;
 use skinnycert::server::models::rsa_key::db::RSAKeyAlgorithm;
+use uuid::Uuid;
 
 #[test]
 fn test_generate_key_pair_valid() {
