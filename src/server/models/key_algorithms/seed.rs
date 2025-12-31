@@ -62,8 +62,8 @@ async fn load_key_algorithm_statuses(
         FROM key_algorithm_statuses
         "#
     )
-        .fetch_all(&mut **tx)
-        .await?;
+    .fetch_all(&mut **tx)
+    .await?;
 
     let mut map = BTreeMap::new();
 
@@ -103,8 +103,8 @@ async fn seed_tls_statuses(tx: &mut Transaction<'_, Postgres>) -> Result<(), sql
             name,
             desc
         )
-            .execute(&mut  **tx)
-            .await?;
+        .execute(&mut **tx)
+        .await?;
     }
 
     Ok(())
@@ -119,8 +119,8 @@ async fn get_tls_status_id(
         r#"SELECT id FROM key_algorithm_type_tls_statuses WHERE name = $1"#,
         name
     )
-        .fetch_one(&mut  **tx)
-        .await
+    .fetch_one(&mut **tx)
+    .await
 }
 
 struct AlgorithmTypeIds {
@@ -183,38 +183,139 @@ async fn seed_algorithm_types(
     }
 
     Ok(AlgorithmTypeIds {
-        rsa: sqlx::query_scalar!(
-            r#"SELECT id FROM key_algorithm_types WHERE name = 'RSA'"#
-        )
-            .fetch_one(&mut  **tx)
+        rsa: sqlx::query_scalar!(r#"SELECT id FROM key_algorithm_types WHERE name = 'RSA'"#)
+            .fetch_one(&mut **tx)
             .await?,
-        ecdsa: sqlx::query_scalar!(
-            r#"SELECT id FROM key_algorithm_types WHERE name = 'ECDSA'"#
-        )
-            .fetch_one(&mut  **tx)
+        ecdsa: sqlx::query_scalar!(r#"SELECT id FROM key_algorithm_types WHERE name = 'ECDSA'"#)
+            .fetch_one(&mut **tx)
             .await?,
         ed25519: sqlx::query_scalar!(
             r#"SELECT id FROM key_algorithm_types WHERE name = 'Ed25519'"#
         )
-            .fetch_one(&mut  **tx)
-            .await?,
-        x25519: sqlx::query_scalar!(
-            r#"SELECT id FROM key_algorithm_types WHERE name = 'X25519'"#
-        )
-            .fetch_one(&mut  **tx)
+        .fetch_one(&mut **tx)
+        .await?,
+        x25519: sqlx::query_scalar!(r#"SELECT id FROM key_algorithm_types WHERE name = 'X25519'"#)
+            .fetch_one(&mut **tx)
             .await?,
     })
 }
 
 /// Seed RSA key algorithms
-async fn seed_rsa_key_algorithms(
+#[tracing::instrument(name = "START UP - Seed concrete RSA keys",level = tracing::Level::DEBUG)]
+pub async fn seed_rsa_key_algorithms(
     tx: &mut Transaction<'_, Postgres>,
     rsa_type_id: uuid::Uuid,
     statuses: &BTreeMap<&'static str, uuid::Uuid>,
+    rsa_min_supported_size: u32,
+    rsa_max_supported_size: u32,
 ) -> Result<(), sqlx::Error> {
     let tls_secure = statuses["TLS_SECURE"];
 
-    let sizes = [2048_i32, 3072_i32, 4096_i32];
+    //
+    // 1. VALIDATION
+    //
+    if rsa_min_supported_size < 2048 {
+        return Err(sqlx::Error::Protocol(
+            "rsa_min_supported_size must be >= 2048".into(),
+        ));
+    }
+    if rsa_max_supported_size < rsa_min_supported_size {
+        return Err(sqlx::Error::Protocol(
+            "rsa_max_supported_size must be >= rsa_min_supported_size".into(),
+        ));
+    }
+    if rsa_min_supported_size % 1024 != 0 || rsa_max_supported_size % 1024 != 0 {
+        return Err(sqlx::Error::Protocol(
+            "RSA sizes must be multiples of 1024".into(),
+        ));
+    }
+
+    //
+    // 2. CLEANUP OF OVERSIZED ENTRIES
+    //
+    // Fetch all RSA key sizes above env max
+    let oversized = sqlx::query!(
+        r#"
+        SELECT id, key_strength
+        FROM key_algorithms
+        WHERE algorithm_type_id = $1
+          AND key_strength > $2
+        "#,
+        rsa_type_id,
+        rsa_max_supported_size as i32
+    )
+        .fetch_all(&mut **tx)
+        .await?;
+
+    if !oversized.is_empty() {
+        let oversized_ids: Vec<uuid::Uuid> = oversized.iter().map(|r| r.id).collect();
+
+        // Check which oversized entries are referenced by certificates
+        let referenced = sqlx::query!(
+            r#"
+            SELECT DISTINCT key_algorithm_id
+            FROM certificates
+            WHERE key_algorithm_id = ANY($1)
+            "#,
+            &oversized_ids
+        )
+            .fetch_all(&mut **tx)
+            .await?;
+
+        let referenced_ids: std::collections::HashSet<uuid::Uuid> =
+            referenced.iter().map(|r| r.key_algorithm_id).collect();
+
+        // Log warning if any oversized entries are referenced
+        if !referenced_ids.is_empty() {
+            let max_db = oversized
+                .iter()
+                .map(|r| r.key_strength.unwrap_or(0))
+                .max()
+                .unwrap_or(0);
+
+            tracing::warn!(
+                "RSA max size reduced to {}, but DB contains larger sizes (up to {}). \
+                 Some of these are referenced by certificates and will be kept. \
+                 Ignoring env max for those sizes.",
+                rsa_max_supported_size,
+                max_db
+            );
+        }
+
+        // Delete only unreferenced oversized entries
+        let deletable_ids: Vec<uuid::Uuid> = oversized_ids
+            .into_iter()
+            .filter(|id| !referenced_ids.contains(id))
+            .collect();
+
+        if !deletable_ids.is_empty() {
+            sqlx::query!(
+                r#"
+                DELETE FROM key_algorithms
+                WHERE id = ANY($1)
+                "#,
+                &deletable_ids
+            )
+                .execute(&mut **tx)
+                .await?;
+
+            tracing::info!(
+                "Deleted {} unused RSA key sizes above configured max {}",
+                deletable_ids.len(),
+                rsa_max_supported_size
+            );
+        }
+    }
+
+    //
+    // 3. INSERT NEW RSA SIZES UP TO ENV MAX
+    //
+    let mut sizes = Vec::new();
+    let mut current = rsa_min_supported_size;
+    while current <= rsa_max_supported_size {
+        sizes.push(current);
+        current += 1024;
+    }
 
     for size in sizes {
         let display_name = format!("RSA {}-bit", size);
@@ -227,17 +328,19 @@ async fn seed_rsa_key_algorithms(
             "#,
             rsa_type_id,
             tls_secure,
-            size,
+            size as i32,
             display_name
         )
-            .execute(&mut  **tx)
+            .execute(&mut **tx)
             .await?;
     }
 
     Ok(())
 }
 
+
 /// Seed ECDSA curves
+#[tracing::instrument(name = "START UP - Seed concrete ECDSA keys",level = tracing::Level::DEBUG)]
 async fn seed_ecdsa_key_algorithms(
     tx: &mut Transaction<'_, Postgres>,
     ecdsa_type_id: uuid::Uuid,
@@ -331,7 +434,12 @@ async fn seed_x25519_key_algorithm(
 }
 
 /// Public entry point
-pub async fn seed_all_algorithms(pool: &PgPool) -> Result<(), sqlx::Error> {
+#[tracing::instrument(name = "START UP - Seed all key data based on configured and OpenSSL supported keys",level = tracing::Level::DEBUG)]
+pub async fn seed_all_algorithms(
+    pool: &PgPool,
+    rsa_key_min_supported_size: u32,
+    rsa_key_max_supported_size: u32,
+) -> Result<(), sqlx::Error> {
     let mut tx = pool.begin().await?;
 
     let ids = seed_algorithm_types(&mut tx).await?;
@@ -339,12 +447,17 @@ pub async fn seed_all_algorithms(pool: &PgPool) -> Result<(), sqlx::Error> {
     // Load all statuses into a BTreeMap<&'static str, Uuid>
     let statuses = load_key_algorithm_statuses(&mut tx).await?;
 
-    seed_rsa_key_algorithms(&mut tx, ids.rsa, &statuses).await?;
+    seed_rsa_key_algorithms(
+        &mut tx,
+        ids.rsa,
+        &statuses,
+        rsa_key_min_supported_size,
+        rsa_key_max_supported_size,
+    )
+    .await?;
     seed_ecdsa_key_algorithms(&mut tx, ids.ecdsa, &statuses).await?;
     seed_ed25519_key_algorithm(&mut tx, ids.ed25519, &statuses).await?;
     seed_x25519_key_algorithm(&mut tx, ids.x25519, &statuses).await?;
-
     tx.commit().await?;
-
     Ok(())
 }

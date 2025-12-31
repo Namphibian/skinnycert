@@ -6,3 +6,4 @@ pub mod responses;
 mod extractors;
 pub mod ecdsa_keys;
 pub mod keys;
+mod key_types;

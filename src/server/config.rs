@@ -1,4 +1,5 @@
 use crate::server::logger::configure_bunyan_logger_format;
+use crate::server::models::key_algorithms::seed::seed_all_algorithms;
 use dotenvy::dotenv;
 use openssl::rand::rand_bytes;
 use sqlx::postgres::{PgPool, PgPoolOptions};
@@ -9,8 +10,7 @@ use std::thread::available_parallelism;
 use tracing::dispatcher;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-use crate::server::models::key_algorithms::seed::seed_all_algorithms;
+use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
 
 const DEFAULT_PORT: u16 = 8080;
 const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;
@@ -137,7 +137,6 @@ fn check_rng() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-
 /// Configure Skinnycert environment, optionally using the provided address and port.
 /// If parameters are Empty, falls back to `.env` values or defaults.
 pub async fn configure_environment(
@@ -205,10 +204,20 @@ pub async fn configure_environment(
             threads
         }
     };
+    let rsa_min_support_size = std::env::var("RSA_KEY_MIN_SUPPORTED_SIZE")
+        .ok()
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(2048);
+    let rsa_max_support_size = std::env::var("RSA_KEY_MAX_SUPPORTED_SIZE")
+        .ok()
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(4096);
+
+    tracing::info!("Using RSA key size range: {}-{}", rsa_min_support_size, rsa_max_support_size);
 
     // --- Configure database connection ---
     let db_pool = configure_database().await?;
-    seed_all_algorithms(&db_pool)
+    seed_all_algorithms(&db_pool, rsa_min_support_size, rsa_max_support_size)
         .await
         .expect("Failed to configure key algorithms");
     tracing::info!("All key algorithms configured");
