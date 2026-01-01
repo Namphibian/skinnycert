@@ -1,5 +1,5 @@
 use crate::server::models::certificates::db::CertificateDetails;
-use crate::server::models::responses::{RepositoryError, map_sqlx_error};
+use crate::server::models::responses::{map_sqlx_error, RepositoryError};
 use sqlx::PgPool;
 use std::error::Error;
 use uuid::Uuid;

@@ -456,6 +456,27 @@ COMMENT ON COLUMN key_algorithm_info.tls_status_created_on
 COMMENT ON COLUMN key_algorithm_info.tls_status_updated_on
     IS 'Timestamp when the TLS status entry was last updated.';
 
+DROP VIEW IF EXISTS key_algorithm_type_info CASCADE;
+CREATE OR REPLACE VIEW key_algorithm_type_info AS
+SELECT
+    -- key_algorithm_types
+    kat.id                AS key_algorithm_type_id,
+    kat.name              AS key_algorithm_type_name,
+    kat.description       AS key_algorithm_type_description,
+    kat.requires_nid      AS key_algorithm_type_requires_nid,
+    kat.requires_strength AS key_algorithm_type_requires_strength,
+    kat.created_on        AS key_algorithm_type_created_on,
+    kat.updated_on        AS key_algorithm_type_updated_on,
+    -- key_algorithm_type_tls_statuses
+    katts.id              AS key_algorithm_type_tls_status_id,
+    katts.name            AS key_algorithm_type_tls_status_name,
+    katts.description     AS key_algorithm_type_tls_status_description,
+    katts.created_on      AS key_algorithm_type_tls_status_created_on,
+    katts.updated_on      AS key_algorithm_type_tls_status_updated_on
+
+FROM key_algorithm_types kat
+         INNER JOIN key_algorithm_type_tls_statuses katts
+                    ON kat.tls_status_id = katts.id;
 -- ============================================================
 -- Function to set updated_on on inserts/updates
 -- ============================================================

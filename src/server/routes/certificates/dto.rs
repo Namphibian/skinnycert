@@ -3,10 +3,10 @@ use crate::server::models::legacy_certificates::certificates_model::{
 };
 use crate::server::models::legacy_certificates::db::DbCertificateWithSans;
 
+use crate::server::models::certificates::db::CertificateDetails;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::server::models::certificates::db::CertificateDetails;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

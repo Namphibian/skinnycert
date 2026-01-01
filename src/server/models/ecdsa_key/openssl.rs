@@ -56,8 +56,6 @@
 //! - Ensure that the library call to `EC_get_builtin_curves` is valid.
 //! - Properly interpret the returned `*const c_char` to a Rust string
 //!   to avoid undefined behavior or crashes.
-use openssl::nid::Nid;
-use sqlx::PgPool;
 use std::ffi::{c_char, c_int};
 
 #[repr(C)]

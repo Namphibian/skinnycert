@@ -1,8 +1,10 @@
 use crate::server::models::key_algorithms::db::KeyAlgorithmInfo;
+use crate::server::routes::conversions::ConversionError;
+use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResponse;
+use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
-use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
 
 #[derive(Debug, thiserror::Error)]
 pub enum KeyAlgorithmConversionError {
@@ -23,13 +25,7 @@ pub struct KeyAlgorithmStatusResponse {
 
 
 
-#[derive(Debug, Serialize)]
-pub struct KeyAlgorithmTlsStatusResponse {
-    pub id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub created_on: DateTime<Utc>,
-}
+
 
 #[derive(Debug, Serialize)]
 pub struct KeyAlgorithmResponse {
@@ -46,28 +42,28 @@ pub struct KeyAlgorithmResponse {
 }
 
 impl TryFrom<KeyAlgorithmInfo> for KeyAlgorithmResponse {
-    type Error = KeyAlgorithmConversionError;
+    type Error = ConversionError;
 
     fn try_from(info: KeyAlgorithmInfo) -> Result<Self, Self::Error> {
         // Validate required fields
         if info.status_name.trim().is_empty() {
-            return Err(KeyAlgorithmConversionError::MissingField("status_name"));
+            return Err(ConversionError::MissingField("status_name"));
         }
 
         if info.algorithm_type_name.trim().is_empty() {
-            return Err(KeyAlgorithmConversionError::MissingField(
+            return Err(ConversionError::MissingField(
                 "algorithm_type_name",
             ));
         }
 
         if info.tls_status_name.trim().is_empty() {
-            return Err(KeyAlgorithmConversionError::MissingField("tls_status_name"));
+            return Err(ConversionError::MissingField("tls_status_name"));
         }
 
         // Validate numeric fields
         if let Some(strength) = info.key_algorithm_strength {
             if strength < 0 {
-                return Err(KeyAlgorithmConversionError::InvalidValue(
+                return Err(ConversionError::InvalidValue(
                     "key_algorithm_strength",
                     strength.to_string(),
                 ));

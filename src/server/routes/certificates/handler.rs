@@ -1,4 +1,5 @@
 use super::dto::{CertificateDetailsResponse, CertificateResponseDto, CreateCertificateDto, PatchCertificateDto};
+use crate::server;
 use crate::server::models::legacy_certificates::certificates_model::CertificateGenerationRequest;
 use crate::server::models::legacy_certificates::repository::CertificateRepository;
 use actix_web::{web, HttpResponse, Responder};
@@ -6,7 +7,6 @@ use sha2::{Digest, Sha256};
 use uuid::Uuid;
 use x509_parser::prelude::FromDer;
 use x509_parser::prelude::X509Certificate;
-use crate::server;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
 pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {

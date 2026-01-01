@@ -82,10 +82,10 @@ use openssl::rsa::Rsa;
 use openssl::sign::{Signer, Verifier};
 
 
+use crate::server::models::key_algorithms::KeyPair;
 use sqlx::FromRow;
 use std::error::Error;
 use uuid::Uuid;
-use crate::server::models::key_algorithms::{KeyPair};
 
 #[derive(Debug, FromRow)]
 pub struct RSAKeyAlgorithm {

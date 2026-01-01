@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct BaseModel {
     pub id: Uuid,
     pub created_on: DateTime<Utc>,

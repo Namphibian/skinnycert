@@ -2,6 +2,7 @@ use crate::server::models::base::BaseModel;
 use crate::server::models::key_algorithms::KeyPair;
 
 use chrono::{DateTime, Utc};
+use openssl::derive::Deriver;
 use openssl::ec::{EcGroup, EcKey};
 use openssl::hash::MessageDigest;
 use openssl::nid::Nid;
@@ -9,20 +10,8 @@ use openssl::pkey::{Id, PKey};
 use openssl::rsa::Rsa;
 use openssl::sign::{Signer, Verifier};
 use std::error::Error;
-use openssl::derive::Deriver;
 use uuid::Uuid;
 
-#[derive(Debug, sqlx::FromRow)]
-pub struct KeyAlgorithmType {
-    #[sqlx(flatten)]
-    pub base: BaseModel,
-
-    pub name: String,
-    pub description: Option<String>,
-    pub requires_nid: bool,
-    pub requires_strength: bool,
-    pub tls_status_id: Uuid,
-}
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithmStatus {

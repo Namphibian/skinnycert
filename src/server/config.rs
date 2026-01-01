@@ -10,7 +10,7 @@ use std::thread::available_parallelism;
 use tracing::dispatcher;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
-use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 const DEFAULT_PORT: u16 = 8080;
 const DEFAULT_DB_MAX_CONNECTIONS: u32 = 5;

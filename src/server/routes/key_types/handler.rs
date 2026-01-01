@@ -1,14 +1,14 @@
-use actix_web::{web, Responder};
+use crate::server::models::key_algorithm_types::db::KeyAlgorithmTypeInfo;
+use crate::server::models::key_algorithm_types::repository::KeyAlgorithmTypeRepository;
 use crate::server::models::responses::RepositoryError;
-use crate::server::models::rsa_key::db::RSAKeyAlgorithm;
-use crate::server::models::rsa_key::repository::RsaKeyRepository;
+use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
 use crate::server::routes::responses::to_response_list;
-use crate::server::routes::rsa_keys::dto::RsaKeyAlgorithmResponse;
+use actix_web::{web, Responder};
 
 #[tracing::instrument(name = "Get All Key Algorithm Types", skip(pool))]
 pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
-    let repo = RsaKeyRepository::new(pool.get_ref().clone());
-    to_response_list::<RSAKeyAlgorithm, RsaKeyAlgorithmResponse, RepositoryError>(
+    let repo = KeyAlgorithmTypeRepository::new(pool.get_ref().clone());
+    to_response_list::<KeyAlgorithmTypeInfo, KeyAlgorithmTypeResponse, RepositoryError>(
         repo.find_all().await,
     )
 }

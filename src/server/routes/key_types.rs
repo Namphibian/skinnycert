@@ -4,16 +4,16 @@ pub mod dto;
 pub mod handler;
 
 macro_rules! key_path {
-    () => { "/keys" };
-    ($suffix:literal) => { concat!("/keys", $suffix) };
+    () => { "/key_types" };
+    ($suffix:literal) => { concat!("/key_types", $suffix) };
 }
 const PATH: &str = key_path!();
 const PATH_WITH_ID: &str = key_path!("/{id}");
-const PATH_WITH_ID_KEYPAIR: &str = key_path!("/{id}/keypair");
+
 
 
 pub fn configure_key_algorithm_type_routes(cfg: &mut web::ServiceConfig) {
-    // cfg.route(PATH, web::get().to(handler::get_handler));
+    cfg.route(PATH, web::get().to(handler::get_handler));
     // cfg.route(PATH_WITH_ID, web::get().to(crate::server::routes::keys::handler::get_by_id_handler));
     // cfg.route(PATH, web::post().to(handler::post_handler));
     // cfg.route(PATH_WITH_ID, web::put().to(handler::put_handler));

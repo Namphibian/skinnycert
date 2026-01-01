@@ -3,13 +3,10 @@ use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
 use crate::server::models::responses::RepositoryError;
 use crate::server::routes::keys::dto::KeyAlgorithmResponse;
 use crate::server::routes::responses::{key_pair_response, to_response, to_response_list};
-use actix_web::{Responder, web};
+use actix_web::{web, Responder};
 
-use serde::Deserialize;
-use crate::server::models::rsa_key::db::RSAKeyAlgorithm;
-use crate::server::models::rsa_key::repository::RsaKeyRepository;
 use crate::server::routes::extractors::PathUuid;
-use crate::server::routes::rsa_keys::dto::RsaKeyAlgorithmResponse;
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct KeyAlgorithmFilter {

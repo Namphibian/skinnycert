@@ -1,5 +1,5 @@
 use crate::server::models::key_algorithms::db::KeyAlgorithmInfo;
-use crate::server::models::responses::{RepositoryError, map_sqlx_error};
+use crate::server::models::responses::{map_sqlx_error, RepositoryError};
 use sqlx::PgPool;
 use uuid::Uuid;
 
