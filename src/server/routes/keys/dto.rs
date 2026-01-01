@@ -6,14 +6,6 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
 
-#[derive(Debug, thiserror::Error)]
-pub enum KeyAlgorithmConversionError {
-    #[error("Missing required field: {0}")]
-    MissingField(&'static str),
-    #[error("Invalid value for field {0}: {1}")]
-    InvalidValue(&'static str, String),
-}
-
 #[derive(Debug, Serialize)]
 pub struct KeyAlgorithmStatusResponse {
     pub id: Uuid,

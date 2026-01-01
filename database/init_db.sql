@@ -490,117 +490,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 
--- Trigger to enforce the 'algorithm' column equals 'RSA' on child inserts/updates
-CREATE OR REPLACE FUNCTION rsa_insert_trigger()
-    RETURNS TRIGGER AS
-$$
-BEGIN
-    -- Enforce RSA key size rule (example: multiple of 1024)
-    IF new.algorithm <> 'RSA' THEN
-        RAISE EXCEPTION USING
-            ERRCODE = '23514', -- data exception
-            MESSAGE = FORMAT(
-                    'Algorithm mismatch in rsa_key_algorithm: expected RSA, got %s',
-                    new.algorithm
-                      );
-    END IF;
-    -- Enforce RSA key size multiple of 1024
-    IF new.key_size % 1024 <> 0 THEN
-        RAISE EXCEPTION USING
-            ERRCODE = '23514', -- or a more specific code like '23514' (check_violation)
-            MESSAGE = FORMAT(
-                    'RSA key size (%s) must be a multiple of 1024',
-                    new.key_size
-                      );
-    END IF;
-
-    RETURN new;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER rsa_before_insert
-    BEFORE INSERT
-    ON rsa_key_algorithm
-    FOR EACH ROW
-EXECUTE FUNCTION rsa_insert_trigger();
-
-CREATE TRIGGER rsa_before_update
-    BEFORE UPDATE
-    ON rsa_key_algorithm
-    FOR EACH ROW
-EXECUTE FUNCTION set_updated_on();
-
-
--- Trigger to enforce the 'algorithm' column equals 'ECDSA' on child inserts/updates
-CREATE OR REPLACE FUNCTION ecdsa_insert_trigger()
-    RETURNS TRIGGER AS
-$$
-BEGIN
-    IF new.algorithm IS NULL THEN
-        new.algorithm := 'ECDSA';
-    ELSIF new.algorithm <> 'ECDSA' THEN
-        RAISE EXCEPTION USING
-            ERRCODE = '23514', -- data exception
-            MESSAGE = FORMAT(
-                    'Algorithm mismatch in ecdsa_key_algorithm: expected ECDSA, got %s',
-                    new.algorithm
-                      );
-    END IF;
-    RETURN new;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER ecdsa_before_insert
-    BEFORE INSERT OR UPDATE
-    ON ecdsa_key_algorithm
-    FOR EACH ROW
-EXECUTE FUNCTION enforce_ecdsa_algorithm_child();
-
-
-CREATE TRIGGER ecdsa_before_update
-    BEFORE UPDATE
-    ON ecdsa_key_algorithm
-    FOR EACH ROW
-EXECUTE FUNCTION set_updated_on();
--- ECDSA rows (common NIDs)
-INSERT INTO ecdsa_key_algorithm
-(
-    algorithm,
---     curve,
---     nid_name,
-    nid_value,
-    display_name
---     standard
-
-)
-VALUES
-    (
-        'ECDSA',
---         'P256',
---         'X9_62_PRIME256V1',
-        415,
-        'NIST P-256'
---         'X9.62'
-
-    ),
-    (
-        'ECDSA',
---         'P384',
---         'SECP384R1',
-        715,
-        'NIST P-384'
---         'SECG'
-
-    ),
-    (
-        'ECDSA',
---         'P521',
---         'SECP521R1',
-        716,
-        'NIST P-521'
---         'SECG'
-
-    );
 -- ============================================================
 -- Main certificates table
 -- ============================================================
@@ -659,117 +548,94 @@ CREATE TRIGGER cert_update_timestamp
     FOR EACH ROW
 EXECUTE FUNCTION update_cert_timestamp();
 
--- ============================================================
--- Views for polymorphic querying
--- ============================================================
 
--- Unified list of available key options (algorithm + parameter + display)
-DROP VIEW IF EXISTS all_key_algorithms CASCADE;
 
-CREATE OR REPLACE VIEW all_key_algorithms AS
-SELECT 'RSA'            AS algorithm,
-       rsa.key_size     AS key_size,
-       rsa.display_name AS display_name,
-       rsa.id           AS key_algorithm_id,
-       rsa.deprecated   AS deprecated
-FROM rsa_key_algorithm rsa
-UNION ALL
-SELECT 'ECDSA'            AS algorithm,
-       ecdsa.curve_size   AS key_size,
-       ecdsa.display_name AS display_name,
-       ecdsa.id           AS key_algorithm_id,
-       ecdsa.deprecated   AS deprecated
-FROM ecdsa_key_algorithm ecdsa;
-
-DROP VIEW IF EXISTS certificate_details CASCADE;
-
-CREATE OR REPLACE VIEW certificate_details AS
-SELECT c.id,
-       c.csr_pem,
-       c.cert_pem,
-       c.key_pem,
-       c.public_key_pem,
-       c.chain_pem,
-       c.key_algorithm_id,
-
-       -- Algorithm metadata (polymorphic join)
-       all_key.algorithm,
-       all_key.key_size,
-       all_key.display_name,
-       all_key.deprecated,
-
-       -- Subject details
-       c.organization,
-       c.organizational_unit,
-       c.country,
-       c.state_or_province,
-       c.locality,
-       c.email,
-
-       -- SANs (ordered array)
-       COALESCE(
-                       ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
-                       FILTER (WHERE cs.san_value IS NOT NULL),
-                       ARRAY []::VARCHAR[]
-       )                                                 AS sans,
-
-       -- Common Name = first SAN (san_order = 0)
-       MIN(cs.san_value) FILTER (WHERE cs.san_order = 0) AS common_name,
-
-       -- Certificate metadata
-       c.fingerprint,
-       c.valid_from,
-       c.valid_to,
-
-       -- Derived metadata
-       (c.cert_pem IS NOT NULL)                          AS is_signed,
-       (NOW() > c.valid_to)                              AS is_expired,
-
-       -- Audit timestamps
-       c.created_on,
-       c.updated_on,
-       c.cert_uploaded_on,
-       c.deleted_on
-
-FROM certificates c
-         JOIN all_key_algorithms all_key
-              ON c.key_algorithm_id = all_key.key_algorithm_id
-         LEFT JOIN certificate_sans cs
-                   ON c.id = cs.certificate_id
-
-GROUP BY c.id,
-         c.csr_pem,
-         c.cert_pem,
-         c.key_pem,
-         c.public_key_pem,
-         c.chain_pem,
-         c.key_algorithm_id,
-         all_key.algorithm,
-         all_key.key_size,
-         all_key.display_name,
-         all_key.deprecated,
-         c.organization,
-         c.organizational_unit,
-         c.country,
-         c.state_or_province,
-         c.locality,
-         c.email,
-         c.fingerprint,
-         c.valid_from,
-         c.valid_to,
-         c.created_on,
-         c.updated_on,
-         c.cert_uploaded_on,
-         c.deleted_on;
+-- DROP VIEW IF EXISTS certificate_details CASCADE;
+--
+-- CREATE OR REPLACE VIEW certificate_details AS
+-- SELECT c.id,
+--        c.csr_pem,
+--        c.cert_pem,
+--        c.key_pem,
+--        c.public_key_pem,
+--        c.chain_pem,
+--        c.key_algorithm_id,
+--
+--        -- Algorithm metadata (polymorphic join)
+--        all_key.algorithm,
+--        all_key.key_size,
+--        all_key.display_name,
+--        all_key.deprecated,
+--
+--        -- Subject details
+--        c.organization,
+--        c.organizational_unit,
+--        c.country,
+--        c.state_or_province,
+--        c.locality,
+--        c.email,
+--
+--        -- SANs (ordered array)
+--        COALESCE(
+--                        ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
+--                        FILTER (WHERE cs.san_value IS NOT NULL),
+--                        ARRAY []::VARCHAR[]
+--        )                                                 AS sans,
+--
+--        -- Common Name = first SAN (san_order = 0)
+--        MIN(cs.san_value) FILTER (WHERE cs.san_order = 0) AS common_name,
+--
+--        -- Certificate metadata
+--        c.fingerprint,
+--        c.valid_from,
+--        c.valid_to,
+--
+--        -- Derived metadata
+--        (c.cert_pem IS NOT NULL)                          AS is_signed,
+--        (NOW() > c.valid_to)                              AS is_expired,
+--
+--        -- Audit timestamps
+--        c.created_on,
+--        c.updated_on,
+--        c.cert_uploaded_on,
+--        c.deleted_on
+--
+-- FROM certificates c
+--          JOIN all_key_algorithms all_key
+--               ON c.key_algorithm_id = all_key.key_algorithm_id
+--          LEFT JOIN certificate_sans cs
+--                    ON c.id = cs.certificate_id
+--
+-- GROUP BY c.id,
+--          c.csr_pem,
+--          c.cert_pem,
+--          c.key_pem,
+--          c.public_key_pem,
+--          c.chain_pem,
+--          c.key_algorithm_id,
+--          all_key.algorithm,
+--          all_key.key_size,
+--          all_key.display_name,
+--          all_key.deprecated,
+--          c.organization,
+--          c.organizational_unit,
+--          c.country,
+--          c.state_or_province,
+--          c.locality,
+--          c.email,
+--          c.fingerprint,
+--          c.valid_from,
+--          c.valid_to,
+--          c.created_on,
+--          c.updated_on,
+--          c.cert_uploaded_on,
+--          c.deleted_on;
 
 
 
 -- ============================================================
 -- Useful indexes
 -- ============================================================
-CREATE INDEX IF NOT EXISTS idx_key_algorithms_algorithm ON key_algorithms (algorithm);
-CREATE INDEX IF NOT EXISTS idx_rsa_key_size ON rsa_key_algorithm (key_size);
-CREATE INDEX IF NOT EXISTS idx_ecdsa_curve ON ecdsa_key_algorithm (curve_size);
 CREATE INDEX IF NOT EXISTS idx_certificates_algorithm_id ON certificates (key_algorithm_id);
 CREATE INDEX IF NOT EXISTS idx_certificates_fingerprint ON certificates (fingerprint);
 
@@ -788,7 +654,7 @@ CREATE TABLE certificate_sans
 
 -- Indexes for common queries
 CREATE INDEX idx_certificates_fingerprint ON certificates (fingerprint);
-CREATE INDEX idx_certificates_expires_on ON certificates (expires_on);
+CREATE INDEX idx_certificates_valid_to ON certificates (valid_to);
 CREATE INDEX idx_certificates_created_on ON certificates (created_on);
 CREATE INDEX idx_certificates_deleted_on ON certificates (deleted_on) WHERE deleted_on IS NULL;
 CREATE INDEX idx_certificate_sans_value ON certificate_sans (san_value);
@@ -839,7 +705,7 @@ SELECT *
 FROM certificates_with_sans
 WHERE deleted_on IS NULL
   AND cert_pem IS NOT NULL
-  AND expires_on > NOW();
+  AND valid_to > NOW();
 
 -- View to find the most recent certificate for each subject + SANs combination
 -- This helps with zero-downtime renewals
@@ -867,8 +733,8 @@ SELECT id,
        fingerprint,
        common_name,
        organization,
-       expires_on,
-       expires_on - NOW()                                                  AS time_until_expiry,
+       valid_to,
+       valid_to - NOW()                                                  AS time_until_expiry,
        -- Check if there's a newer cert for the same subject
        EXISTS (SELECT 1
                FROM active_certificates newer
@@ -881,10 +747,10 @@ SELECT id,
                  AND newer.created_on > certificates_with_sans.created_on) AS has_renewal
 FROM certificates_with_sans
 WHERE deleted_on IS NULL
-  AND expires_on IS NOT NULL
-  AND expires_on > NOW()
-  AND expires_on < NOW() + INTERVAL '30 days'
-ORDER BY expires_on;
+  AND valid_to IS NOT NULL
+  AND valid_to > NOW()
+  AND valid_to < NOW() + INTERVAL '30 days'
+ORDER BY valid_to;
 
 -- View for overlapping legacy_certificates (useful for monitoring zero-downtime rotation)
 CREATE VIEW overlapping_certificates AS
@@ -892,12 +758,12 @@ SELECT c1.id                                                                    
        c1.common_name,
        c1.fingerprint                                                               AS fingerprint_1,
        c1.valid_from                                                                AS valid_from_1,
-       c1.expires_on                                                                AS expires_on_1,
+       c1.valid_to                                                                AS valid_to_1,
        c2.id                                                                        AS cert_id_2,
        c2.fingerprint                                                               AS fingerprint_2,
        c2.valid_from                                                                AS valid_from_2,
-       c2.expires_on                                                                AS expires_on_2,
-       LEAST(c1.expires_on, c2.expires_on) - GREATEST(c1.valid_from, c2.valid_from) AS overlap_duration
+       c2.valid_to                                                                AS valid_to_2,
+       LEAST(c1.valid_to, c2.valid_to) - GREATEST(c1.valid_from, c2.valid_from) AS overlap_duration
 FROM active_certificates c1
          JOIN active_certificates c2 ON
     c1.organization = c2.organization
@@ -907,8 +773,8 @@ FROM active_certificates c1
         AND c1.locality = c2.locality
         AND c1.common_name = c2.common_name
         AND c1.id < c2.id -- Avoid duplicates
-WHERE c1.valid_from < c2.expires_on
-  AND c2.valid_from < c1.expires_on;
+WHERE c1.valid_from < c2.valid_to
+  AND c2.valid_from < c1.valid_to;
 
 CREATE VIEW certificate_with_sans AS
 SELECT c.id,

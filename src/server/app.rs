@@ -8,6 +8,7 @@ use actix_web::{web, App, HttpServer};
 use sqlx::PgPool;
 use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
+use crate::server::routes::key_statuses::configure_key_algorithm_status_routes;
 
 pub fn run(
     listener: TcpListener,
@@ -22,6 +23,7 @@ pub fn run(
             .configure(configure_key_algorithm_routes)
             .configure(configure_key_algorithm_type_routes)
             .configure(configure_key_algorithm_type_tls_status_routes)
+            .configure(configure_key_algorithm_status_routes)
         // .configure(configure_certificate_route)
         // .configure(configure_rsa_key_route)
         // .configure(configure_ecdsa_key_route)

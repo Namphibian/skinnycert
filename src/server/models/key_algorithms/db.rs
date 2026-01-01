@@ -13,14 +13,6 @@ use std::error::Error;
 use uuid::Uuid;
 
 #[derive(Debug, sqlx::FromRow)]
-pub struct KeyAlgorithmStatus {
-    #[sqlx(flatten)]
-    pub base: BaseModel,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-#[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithm {
     #[sqlx(flatten)]
     pub base: BaseModel,
