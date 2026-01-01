@@ -6,3 +6,4 @@ pub mod certificates;
 pub mod key_algorithms;
 mod base;
 pub mod key_algorithm_types;
+pub mod key_algorithm_type_tls_statuses;

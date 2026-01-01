@@ -7,5 +7,5 @@ mod extractors;
 pub mod ecdsa_keys;
 pub mod keys;
 pub mod key_types;
-mod key_type_tls_statuses;
+pub mod key_type_tls_statuses;
 mod conversions;

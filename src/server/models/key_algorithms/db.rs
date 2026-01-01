@@ -20,13 +20,7 @@ pub struct KeyAlgorithmStatus {
     pub name: String,
     pub description: Option<String>,
 }
-#[derive(Debug, sqlx::FromRow)]
-pub struct KeyAlgorithmTypeTlsStatus {
-    #[sqlx(flatten)]
-    pub base: BaseModel,
-    pub name: String,
-    pub description: Option<String>,
-}
+
 #[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithm {
     #[sqlx(flatten)]

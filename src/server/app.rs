@@ -1,5 +1,6 @@
 use crate::server::logger::SkinnycertRouteSpanBuilder;
 use crate::server::routes::health_check::configure_health_check;
+use crate::server::routes::key_type_tls_statuses::configure_key_algorithm_type_tls_status_routes;
 use crate::server::routes::key_types::configure_key_algorithm_type_routes;
 use crate::server::routes::keys::configure_key_algorithm_routes;
 use actix_web::dev::Server;
@@ -20,6 +21,7 @@ pub fn run(
             .configure(configure_health_check)
             .configure(configure_key_algorithm_routes)
             .configure(configure_key_algorithm_type_routes)
+            .configure(configure_key_algorithm_type_tls_status_routes)
         // .configure(configure_certificate_route)
         // .configure(configure_rsa_key_route)
         // .configure(configure_ecdsa_key_route)
