@@ -2,13 +2,14 @@ use crate::server::models::responses::RepositoryError;
 use crate::server::models::rsa_key::db::RSAKeyAlgorithm;
 use crate::server::models::rsa_key::repository::RsaKeyRepository;
 use crate::server::routes::extractors::PathUuid;
-use crate::server::routes::responses::{key_pair_response, to_patch_response, to_response, to_response_list};
+use crate::server::routes::responses::{
+    key_pair_response, to_patch_response, to_response, to_response_list,
+};
 use crate::server::routes::rsa_keys::dto::{
     to_create_response, to_delete_response, NewRsaKeyAlgorithmRequest,
     RsaKeyAlgorithmPatchRequest, RsaKeyAlgorithmResponse,
 };
 use actix_web::{web, HttpResponse, Responder};
-
 
 #[tracing::instrument(name = "Get All RSA Keys", skip(pool))]
 pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {

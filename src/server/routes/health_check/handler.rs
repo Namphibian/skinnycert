@@ -70,8 +70,7 @@ pub async fn post_handler() -> impl Responder {
 /// Panics if `/proc/meminfo` cannot be read or parsed.
 #[tracing::instrument(name = "Get Free Memory.")]
 fn get_free_memory() -> u64 {
-    let mem_info = fs::read_to_string("/proc/meminfo")
-        .expect("Failed to read /proc/meminfo");
+    let mem_info = fs::read_to_string("/proc/meminfo").expect("Failed to read /proc/meminfo");
 
     mem_info
         .lines()
@@ -91,8 +90,7 @@ fn get_free_memory() -> u64 {
 /// Panics if `/proc/self/status` cannot be read or parsed.
 #[tracing::instrument(name = "Get Process Memory.")]
 fn get_process_memory() -> u64 {
-    let status = fs::read_to_string("/proc/self/status")
-        .expect("Failed to read /proc/self/status");
+    let status = fs::read_to_string("/proc/self/status").expect("Failed to read /proc/self/status");
 
     status
         .lines()

@@ -12,7 +12,6 @@ use openssl::sign::{Signer, Verifier};
 use std::error::Error;
 use uuid::Uuid;
 
-
 #[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithmStatus {
     #[sqlx(flatten)]

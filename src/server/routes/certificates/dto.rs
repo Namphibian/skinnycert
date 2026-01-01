@@ -27,7 +27,7 @@ pub struct PemData {
     pub cert_pem: Option<String>,
     pub key_pem: String,
     pub public_key_pem: String,
-    pub chain_pem: Option<String>
+    pub chain_pem: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,11 +37,11 @@ pub struct KeyAlgorithmData {
     pub algorithm: String,
     pub key_size: i32,
     pub display_name: String,
-    pub deprecated: bool
+    pub deprecated: bool,
 }
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SubjectData{
+pub struct SubjectData {
     // Subject details
     pub organization: Option<String>,
     pub organizational_unit: Option<String>,
@@ -59,7 +59,7 @@ pub struct SansData {
 }
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct  X509Metadata {
+pub struct X509Metadata {
     // Certificate metadata
     pub fingerprint: Option<String>,
     pub valid_from: Option<DateTime<Utc>>,
@@ -128,7 +128,6 @@ impl TryFrom<CertificateDetails> for CertificateDetailsResponse {
         })
     }
 }
-
 
 /// DTO for certificate response (sent to clients)
 #[derive(Debug, Serialize, Deserialize)]

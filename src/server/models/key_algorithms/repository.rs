@@ -40,10 +40,10 @@ impl KeyAlgorithmRepository {
             WHERE key_algorithm_id = $1
             "#,
         )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(map_sqlx_error)?;
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(map_sqlx_error)?;
         Ok(result)
     }
 }

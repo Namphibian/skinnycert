@@ -3,7 +3,6 @@ use crate::server::models::responses::{map_sqlx_error, PatchResult, RepositoryEr
 use sqlx::PgPool;
 use uuid::Uuid;
 
-
 pub struct EcdsaKeyRepository {
     pool: PgPool,
 }
@@ -12,7 +11,6 @@ impl EcdsaKeyRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
 
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<EcdsaKeyAlgorithm>, RepositoryError> {
         let result = sqlx::query_as::<_, EcdsaKeyAlgorithm>(
@@ -73,5 +71,4 @@ impl EcdsaKeyRepository {
             }
         }
     }
-
 }

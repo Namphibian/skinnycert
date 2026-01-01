@@ -4,7 +4,6 @@ use crate::server::models::rsa_key::db::RSAKeyAlgorithm;
 use sqlx::PgPool;
 use uuid::Uuid;
 
-
 /// A repository for handling RSA keys, backed by a PostgreSQL database.
 ///
 /// The `RsaKeyRepository` is responsible for managing storage and retrieval

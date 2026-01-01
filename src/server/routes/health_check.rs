@@ -4,7 +4,6 @@ mod model;
 use actix_web::web;
 use handler::{get_handler, post_handler};
 
-
 /// The base path for the health check endpoint.
 ///
 /// This constant defines the URL path where the health check routes will be mounted.

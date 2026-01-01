@@ -11,12 +11,12 @@ impl KeyAlgorithmTypeRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-    pub async fn find_all(&self) -> Result<Vec<KeyAlgorithmTypeInfo>,RepositoryError> {
-        let results = sqlx::query_as::<_, KeyAlgorithmTypeInfo>
-            ("SELECT * FROM key_algorithm_type_info")
-            .fetch_all(&self.pool)
-            .await
-            .map_err(map_sqlx_error)?;
+    pub async fn find_all(&self) -> Result<Vec<KeyAlgorithmTypeInfo>, RepositoryError> {
+        let results =
+            sqlx::query_as::<_, KeyAlgorithmTypeInfo>("SELECT * FROM key_algorithm_type_info")
+                .fetch_all(&self.pool)
+                .await
+                .map_err(map_sqlx_error)?;
         Ok(results)
     }
 }

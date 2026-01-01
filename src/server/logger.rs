@@ -7,7 +7,6 @@ use tracing::Span;
 use tracing_actix_web::{DefaultRootSpanBuilder, RootSpanBuilder};
 use tracing_bunyan_formatter::BunyanFormattingLayer;
 
-
 pub struct SkinnycertRouteSpanBuilder;
 
 impl RootSpanBuilder for SkinnycertRouteSpanBuilder {

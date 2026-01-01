@@ -244,8 +244,8 @@ pub async fn seed_rsa_key_algorithms(
         rsa_type_id,
         rsa_max_supported_size as i32
     )
-        .fetch_all(&mut **tx)
-        .await?;
+    .fetch_all(&mut **tx)
+    .await?;
 
     if !oversized.is_empty() {
         let oversized_ids: Vec<uuid::Uuid> = oversized.iter().map(|r| r.id).collect();
@@ -259,8 +259,8 @@ pub async fn seed_rsa_key_algorithms(
             "#,
             &oversized_ids
         )
-            .fetch_all(&mut **tx)
-            .await?;
+        .fetch_all(&mut **tx)
+        .await?;
 
         let referenced_ids: std::collections::HashSet<uuid::Uuid> =
             referenced.iter().map(|r| r.key_algorithm_id).collect();
@@ -296,8 +296,8 @@ pub async fn seed_rsa_key_algorithms(
                 "#,
                 &deletable_ids
             )
-                .execute(&mut **tx)
-                .await?;
+            .execute(&mut **tx)
+            .await?;
 
             tracing::info!(
                 "Deleted {} unused RSA key sizes above configured max {}",
@@ -337,7 +337,6 @@ pub async fn seed_rsa_key_algorithms(
 
     Ok(())
 }
-
 
 /// Seed ECDSA curves
 #[tracing::instrument(name = "START UP - Seed concrete ECDSA keys",level = tracing::Level::DEBUG)]

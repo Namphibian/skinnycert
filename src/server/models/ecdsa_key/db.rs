@@ -36,7 +36,11 @@ impl KeyPair for EcdsaKeyAlgorithm {
         Ok((private_pem, public_pem))
     }
 
-    fn verify_key_pair(&self, private_key_pem: String, public_key_pem: String) -> Result<(), Box<dyn Error>> {
+    fn verify_key_pair(
+        &self,
+        private_key_pem: String,
+        public_key_pem: String,
+    ) -> Result<(), Box<dyn Error>> {
         let private_key = PKey::private_key_from_pem(private_key_pem.as_bytes())?;
         let public_key = PKey::public_key_from_pem(public_key_pem.as_bytes())?;
         // Sign some data with the private key

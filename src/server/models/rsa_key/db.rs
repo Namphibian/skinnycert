@@ -81,7 +81,6 @@ use openssl::pkey::PKey;
 use openssl::rsa::Rsa;
 use openssl::sign::{Signer, Verifier};
 
-
 use crate::server::models::key_algorithms::KeyPair;
 use sqlx::FromRow;
 use std::error::Error;

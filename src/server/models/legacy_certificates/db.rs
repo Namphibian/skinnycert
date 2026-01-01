@@ -1,4 +1,6 @@
-use crate::server::models::legacy_certificates::certificates_model::{EcdsaCurve, KeyAlgorithm, RsaKeySize};
+use crate::server::models::legacy_certificates::certificates_model::{
+    EcdsaCurve, KeyAlgorithm, RsaKeySize,
+};
 use chrono::{DateTime, Utc};
 use sqlx::FromRow;
 use uuid::Uuid;

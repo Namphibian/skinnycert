@@ -1,8 +1,8 @@
 use std::error::Error;
 
 pub mod db;
-pub mod seed;
 pub mod repository;
+pub mod seed;
 
 pub trait KeyPair {
     fn generate_key_pair(&self) -> Result<(String, String), Box<dyn std::error::Error>>;

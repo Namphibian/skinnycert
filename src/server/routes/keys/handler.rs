@@ -74,7 +74,6 @@ pub async fn get_by_id_handler(pool: web::Data<sqlx::PgPool>, id: PathUuid) -> i
     )
 }
 
-
 #[tracing::instrument(name = "Generate Crypto Key Pair", skip(pool))]
 pub async fn generate_key_pair(pool: web::Data<sqlx::PgPool>, id: PathUuid) -> impl Responder {
     let repo = KeyAlgorithmRepository::new(pool.get_ref().clone());

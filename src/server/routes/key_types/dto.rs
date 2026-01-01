@@ -31,7 +31,6 @@ impl TryFrom<KeyAlgorithmTypeInfo> for KeyAlgorithmTypeResponse {
             ));
         }
 
-
         Ok(KeyAlgorithmTypeResponse {
             id: info.key_algorithm_type_id,
             name: info.key_algorithm_type_name,
@@ -46,9 +45,6 @@ impl TryFrom<KeyAlgorithmTypeInfo> for KeyAlgorithmTypeResponse {
                 description: info.key_algorithm_type_tls_status_description,
                 created_on: info.key_algorithm_type_tls_status_created_on,
             },
-
         })
     }
 }
-
-

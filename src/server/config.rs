@@ -213,7 +213,11 @@ pub async fn configure_environment(
         .and_then(|s| s.parse::<u32>().ok())
         .unwrap_or(4096);
 
-    tracing::info!("Using RSA key size range: {}-{}", rsa_min_support_size, rsa_max_support_size);
+    tracing::info!(
+        "Using RSA key size range: {}-{}",
+        rsa_min_support_size,
+        rsa_max_support_size
+    );
 
     // --- Configure database connection ---
     let db_pool = configure_database().await?;

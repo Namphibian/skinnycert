@@ -1,8 +1,8 @@
+use crate::server::models::key_algorithm_type_tls_statuses::db::KeyAlgorithmTypeTlsStatus;
+use crate::server::routes::conversions::ConversionError;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use uuid::Uuid;
-use crate::server::models::key_algorithm_type_tls_statuses::db::KeyAlgorithmTypeTlsStatus;
-use crate::server::routes::conversions::ConversionError;
 
 #[derive(Debug, Serialize)]
 pub struct KeyAlgorithmTlsStatusResponse {

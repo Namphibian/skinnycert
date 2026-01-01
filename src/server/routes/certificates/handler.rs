@@ -1,4 +1,6 @@
-use super::dto::{CertificateDetailsResponse, CertificateResponseDto, CreateCertificateDto, PatchCertificateDto};
+use super::dto::{
+    CertificateDetailsResponse, CertificateResponseDto, CreateCertificateDto, PatchCertificateDto,
+};
 use crate::server;
 use crate::server::models::legacy_certificates::certificates_model::CertificateGenerationRequest;
 use crate::server::models::legacy_certificates::repository::CertificateRepository;
@@ -10,7 +12,9 @@ use x509_parser::prelude::X509Certificate;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
 pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
-    let repo = server::models::certificates::repository::CertificateRepository::new(pool.get_ref().clone());
+    let repo = server::models::certificates::repository::CertificateRepository::new(
+        pool.get_ref().clone(),
+    );
 
     match repo.find_all().await {
         Ok(certs) => {
@@ -128,7 +132,9 @@ pub async fn get_by_id_handler(
     path: web::Path<Uuid>,
 ) -> impl Responder {
     let cert_id = path.into_inner();
-    let repo = server::models::certificates::repository::CertificateRepository::new(pool.get_ref().clone());
+    let repo = server::models::certificates::repository::CertificateRepository::new(
+        pool.get_ref().clone(),
+    );
 
     use std::convert::TryFrom;
 

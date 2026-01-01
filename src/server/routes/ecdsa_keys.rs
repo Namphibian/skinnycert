@@ -1,13 +1,15 @@
 use actix_web::web;
 
-mod handler;
 mod dto;
-
-
+mod handler;
 
 macro_rules! ecdsa_path {
-    () => { "/keys/ecdsa" };
-    ($suffix:literal) => { concat!("/keys/ecdsa", $suffix) };
+    () => {
+        "/keys/ecdsa"
+    };
+    ($suffix:literal) => {
+        concat!("/keys/ecdsa", $suffix)
+    };
 }
 
 const PATH: &str = ecdsa_path!();
@@ -22,5 +24,8 @@ pub fn configure_ecdsa_key_route(cfg: &mut web::ServiceConfig) {
     // cfg.route(PATH_WITH_ID, web::patch().to(handler::patch_handler));
     // cfg.route(PATH_WITH_ID, web::delete().to(handler::delete_handler));
     // cfg.route(PATH_WITH_ID_KEYPAIR, web::get().to(handler::generate_key_pair));
-    cfg.route(PATH_WITH_ID_KEYPAIR, web::get().to(handler::generate_key_pair));
+    cfg.route(
+        PATH_WITH_ID_KEYPAIR,
+        web::get().to(handler::generate_key_pair),
+    );
 }

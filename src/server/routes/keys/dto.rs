@@ -23,10 +23,6 @@ pub struct KeyAlgorithmStatusResponse {
     pub updated_on: Option<DateTime<Utc>>,
 }
 
-
-
-
-
 #[derive(Debug, Serialize)]
 pub struct KeyAlgorithmResponse {
     // key_algorithms
@@ -51,9 +47,7 @@ impl TryFrom<KeyAlgorithmInfo> for KeyAlgorithmResponse {
         }
 
         if info.algorithm_type_name.trim().is_empty() {
-            return Err(ConversionError::MissingField(
-                "algorithm_type_name",
-            ));
+            return Err(ConversionError::MissingField("algorithm_type_name"));
         }
 
         if info.tls_status_name.trim().is_empty() {

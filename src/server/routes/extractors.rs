@@ -74,9 +74,9 @@ impl FromRequest for PathUuid {
         let id = req.match_info().query("id");
         match Uuid::parse_str(id) {
             Ok(uuid) => ready(Ok(PathUuid(uuid))),
-            Err(_) => ready(Err(actix_web::error::ErrorBadRequest("Invalid UUID format"))),
+            Err(_) => ready(Err(actix_web::error::ErrorBadRequest(
+                "Invalid UUID format",
+            ))),
         }
     }
 }
-
-
