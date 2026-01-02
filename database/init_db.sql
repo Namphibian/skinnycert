@@ -496,25 +496,25 @@ $$ LANGUAGE plpgsql;
 DROP TABLE IF EXISTS certificates CASCADE;
 CREATE TABLE certificates
 (
-    id                  uuid PRIMARY KEY     DEFAULT uuid_generate_v4(),
+    id                  uuid PRIMARY KEY      DEFAULT uuid_generate_v4(),
 
     -- PEM data
-    csr_pem             TEXT        NOT NULL,
-    cert_pem            TEXT, -- NULL until signed by CA
-    key_pem             TEXT        NOT NULL,
-    public_key_pem      TEXT        NOT NULL,
-    chain_pem           TEXT,
+    csr_pem             TEXT         NOT NULL,
+    cert_pem            TEXT         NULL, -- NULL until signed by CA
+    key_pem             TEXT         NOT NULL,
+    public_key_pem      TEXT         NOT NULL,
+    chain_pem           TEXT         NULL, -- NULL until signed by CA
 
     -- Link to polymorphic base algorithm row (points to either RSA or ECDSA child row)
-    key_algorithm_id    uuid        NOT NULL REFERENCES key_algorithms (id),
+    key_algorithm_id    uuid         NOT NULL REFERENCES key_algorithms (id),
 
     -- Subject details
-    organization        VARCHAR(255),
-    organizational_unit VARCHAR(255),
-    country             CHAR(2),
-    state_or_province   VARCHAR(255),
-    locality            VARCHAR(255),
-    email               VARCHAR(255),
+    organization        VARCHAR(256) NOT NULL,
+    organizational_unit VARCHAR(128) NULL,
+    country             CHAR(2)      NOT NULL,
+    state_or_province   VARCHAR(128) NULL,
+    locality            VARCHAR(128) NULL,
+    email               VARCHAR(256) NULL,
 
     -- Certificate metadata
     fingerprint         VARCHAR(64) UNIQUE,
@@ -522,8 +522,8 @@ CREATE TABLE certificates
     valid_to            timestamptz,
 
     -- Audit timestamps
-    created_on          timestamptz NOT NULL DEFAULT NOW(),
-    updated_on          timestamptz NOT NULL DEFAULT NOW(),
+    created_on          timestamptz  NOT NULL DEFAULT NOW(),
+    updated_on          timestamptz  NOT NULL DEFAULT NOW(),
     cert_uploaded_on    timestamptz,
     deleted_on          timestamptz
 );
@@ -550,86 +550,133 @@ EXECUTE FUNCTION update_cert_timestamp();
 
 
 
--- DROP VIEW IF EXISTS certificate_details CASCADE;
---
--- CREATE OR REPLACE VIEW certificate_details AS
--- SELECT c.id,
---        c.csr_pem,
---        c.cert_pem,
---        c.key_pem,
---        c.public_key_pem,
---        c.chain_pem,
---        c.key_algorithm_id,
---
---        -- Algorithm metadata (polymorphic join)
---        all_key.algorithm,
---        all_key.key_size,
---        all_key.display_name,
---        all_key.deprecated,
---
---        -- Subject details
---        c.organization,
---        c.organizational_unit,
---        c.country,
---        c.state_or_province,
---        c.locality,
---        c.email,
---
---        -- SANs (ordered array)
---        COALESCE(
---                        ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
---                        FILTER (WHERE cs.san_value IS NOT NULL),
---                        ARRAY []::VARCHAR[]
---        )                                                 AS sans,
---
---        -- Common Name = first SAN (san_order = 0)
---        MIN(cs.san_value) FILTER (WHERE cs.san_order = 0) AS common_name,
---
---        -- Certificate metadata
---        c.fingerprint,
---        c.valid_from,
---        c.valid_to,
---
---        -- Derived metadata
---        (c.cert_pem IS NOT NULL)                          AS is_signed,
---        (NOW() > c.valid_to)                              AS is_expired,
---
---        -- Audit timestamps
---        c.created_on,
---        c.updated_on,
---        c.cert_uploaded_on,
---        c.deleted_on
---
--- FROM certificates c
---          JOIN all_key_algorithms all_key
---               ON c.key_algorithm_id = all_key.key_algorithm_id
---          LEFT JOIN certificate_sans cs
---                    ON c.id = cs.certificate_id
---
--- GROUP BY c.id,
---          c.csr_pem,
---          c.cert_pem,
---          c.key_pem,
---          c.public_key_pem,
---          c.chain_pem,
---          c.key_algorithm_id,
---          all_key.algorithm,
---          all_key.key_size,
---          all_key.display_name,
---          all_key.deprecated,
---          c.organization,
---          c.organizational_unit,
---          c.country,
---          c.state_or_province,
---          c.locality,
---          c.email,
---          c.fingerprint,
---          c.valid_from,
---          c.valid_to,
---          c.created_on,
---          c.updated_on,
---          c.cert_uploaded_on,
---          c.deleted_on;
+DROP VIEW IF EXISTS certificate_info CASCADE;
+
+CREATE OR REPLACE VIEW certificate_info AS
+SELECT
+    -- Certificate core fields
+    c.id,
+    c.csr_pem,
+    c.cert_pem,
+    c.key_pem,
+    c.public_key_pem,
+    c.chain_pem,
+    c.key_algorithm_id,
+
+    -- Expanded algorithm metadata from key_algorithm_info
+    all_key.key_algorithm_display_name                AS key_algorithm_display_name,
+    all_key.key_algorithm_strength                    AS key_algorithm_key_strength,
+    all_key.key_algorithm_nid_value                   AS key_algorithm_nid_value,
+    all_key.key_algorithm_created_on,
+    all_key.key_algorithm_updated_on,
+
+    -- Algorithm status
+    all_key.status_id,
+    all_key.status_name,
+    all_key.status_description,
+    all_key.status_created_on,
+    all_key.status_updated_on,
+
+    -- Algorithm type
+    all_key.algorithm_type_id,
+    all_key.algorithm_type_name,
+    all_key.algorithm_type_description,
+    all_key.algorithm_type_requires_nid,
+    all_key.algorithm_type_requires_strength,
+    all_key.algorithm_type_created_on,
+    all_key.algorithm_type_updated_on,
+
+    -- TLS status
+    all_key.tls_status_id,
+    all_key.tls_status_name,
+    all_key.tls_status_description,
+    all_key.tls_status_created_on,
+    all_key.tls_status_updated_on,
+    -- Subject details
+    c.organization,
+    c.organizational_unit,
+    c.country,
+    c.state_or_province,
+    c.locality,
+    c.email,
+
+    -- SANs (ordered array)
+    COALESCE(
+                    ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
+                    FILTER (WHERE cs.san_value IS NOT NULL),
+                    ARRAY []::VARCHAR[]
+    )                                                 AS sans,
+
+    -- Common Name = first SAN (san_order = 0)
+    MIN(cs.san_value) FILTER (WHERE cs.san_order = 0) AS common_name,
+
+    -- Certificate metadata
+    c.fingerprint,
+    c.valid_from,
+    c.valid_to,
+
+    -- Derived metadata
+    COALESCE((c.cert_pem IS NOT NULL), FALSE)         AS is_signed,
+    COALESCE((NOW() > c.valid_to), FALSE)             AS is_expired,
+
+    -- Audit timestamps
+    c.created_on,
+    c.updated_on,
+    c.cert_uploaded_on,
+    c.deleted_on
+
+FROM certificates c
+         JOIN key_algorithm_info all_key
+              ON c.key_algorithm_id = all_key.key_algorithm_id
+         LEFT JOIN certificate_sans cs
+                   ON c.id = cs.certificate_id
+
+GROUP BY c.id,
+         c.csr_pem,
+         c.cert_pem,
+         c.key_pem,
+         c.public_key_pem,
+         c.chain_pem,
+         c.key_algorithm_id,
+
+         -- All fields from key_algorithm_info
+         all_key.key_algorithm_display_name,
+         all_key.key_algorithm_strength,
+         all_key.key_algorithm_nid_value,
+         all_key.key_algorithm_created_on,
+         all_key.key_algorithm_updated_on,
+         all_key.status_id,
+         all_key.status_name,
+         all_key.status_description,
+         all_key.status_created_on,
+         all_key.status_updated_on,
+         all_key.algorithm_type_id,
+         all_key.algorithm_type_name,
+         all_key.algorithm_type_description,
+         all_key.algorithm_type_requires_nid,
+         all_key.algorithm_type_requires_strength,
+         all_key.algorithm_type_created_on,
+         all_key.algorithm_type_updated_on,
+         all_key.tls_status_id,
+         all_key.tls_status_name,
+         all_key.tls_status_description,
+         all_key.tls_status_created_on,
+         all_key.tls_status_updated_on,
+         all_key.tls_status_updated_on,
+         -- Certificate subject + metadata
+         c.organization,
+         c.organizational_unit,
+         c.country,
+         c.state_or_province,
+         c.locality,
+         c.email,
+         c.fingerprint,
+         c.valid_from,
+         c.valid_to,
+         c.created_on,
+         c.updated_on,
+         c.cert_uploaded_on,
+         c.deleted_on;
 
 
 
@@ -734,7 +781,7 @@ SELECT id,
        common_name,
        organization,
        valid_to,
-       valid_to - NOW()                                                  AS time_until_expiry,
+       valid_to - NOW()                                                    AS time_until_expiry,
        -- Check if there's a newer cert for the same subject
        EXISTS (SELECT 1
                FROM active_certificates newer
@@ -754,15 +801,15 @@ ORDER BY valid_to;
 
 -- View for overlapping legacy_certificates (useful for monitoring zero-downtime rotation)
 CREATE VIEW overlapping_certificates AS
-SELECT c1.id                                                                        AS cert_id_1,
+SELECT c1.id                                                                    AS cert_id_1,
        c1.common_name,
-       c1.fingerprint                                                               AS fingerprint_1,
-       c1.valid_from                                                                AS valid_from_1,
-       c1.valid_to                                                                AS valid_to_1,
-       c2.id                                                                        AS cert_id_2,
-       c2.fingerprint                                                               AS fingerprint_2,
-       c2.valid_from                                                                AS valid_from_2,
-       c2.valid_to                                                                AS valid_to_2,
+       c1.fingerprint                                                           AS fingerprint_1,
+       c1.valid_from                                                            AS valid_from_1,
+       c1.valid_to                                                              AS valid_to_1,
+       c2.id                                                                    AS cert_id_2,
+       c2.fingerprint                                                           AS fingerprint_2,
+       c2.valid_from                                                            AS valid_from_2,
+       c2.valid_to                                                              AS valid_to_2,
        LEAST(c1.valid_to, c2.valid_to) - GREATEST(c1.valid_from, c2.valid_from) AS overlap_duration
 FROM active_certificates c1
          JOIN active_certificates c2 ON

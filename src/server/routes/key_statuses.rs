@@ -1,7 +1,7 @@
 use actix_web::web;
 
-mod dto;
-mod handler;
+pub mod dto;
+pub mod handler;
 macro_rules! key_path {
     () => {
         "/key_statuses"

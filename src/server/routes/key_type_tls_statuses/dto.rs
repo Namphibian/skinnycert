@@ -1,15 +1,17 @@
 use crate::server::models::key_algorithm_type_tls_statuses::db::KeyAlgorithmTypeTlsStatus;
 use crate::server::routes::conversions::ConversionError;
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmTlsStatusResponse {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
     pub created_on: DateTime<Utc>,
+    pub updated_on: Option<DateTime<Utc>>,
 }
 
 impl TryFrom<KeyAlgorithmTypeTlsStatus> for KeyAlgorithmTlsStatusResponse {
@@ -28,6 +30,7 @@ impl TryFrom<KeyAlgorithmTypeTlsStatus> for KeyAlgorithmTlsStatusResponse {
             name: info.name,
             description: info.description,
             created_on: info.base.created_on,
+            updated_on: info.base.updated_on,
         })
     }
 }

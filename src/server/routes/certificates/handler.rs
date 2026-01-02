@@ -1,9 +1,12 @@
 use super::dto::{
-    CertificateDetailsResponse, CertificateResponseDto, CreateCertificateDto, PatchCertificateDto,
+    CertificateInfoResponse, CertificateResponseDto, CreateCertificateDto, PatchCertificateDto,
 };
 use crate::server;
+use crate::server::models::certificates::db::CertificateInfo;
 use crate::server::models::legacy_certificates::certificates_model::CertificateGenerationRequest;
 use crate::server::models::legacy_certificates::repository::CertificateRepository;
+use crate::server::models::responses::RepositoryError;
+use crate::server::routes::responses::{to_response, to_response_list};
 use actix_web::{web, HttpResponse, Responder};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
@@ -15,32 +18,34 @@ pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
     let repo = server::models::certificates::repository::CertificateRepository::new(
         pool.get_ref().clone(),
     );
-
-    match repo.find_all().await {
-        Ok(certs) => {
-            let dtos: Result<Vec<_>, _> = certs
-                .into_iter()
-                .map(CertificateDetailsResponse::try_from)
-                .collect();
-            match dtos {
-                Ok(valid_dtos) => HttpResponse::Ok().json(valid_dtos),
-                Err(e) => {
-                    tracing::error!("Failed to convert certificate: {}", e);
-                    HttpResponse::UnprocessableEntity().json(serde_json::json!({
-                        "error": "Invalid certificate format",
-                        "message": e.to_string()
-                    }))
-                }
-            }
-        }
-        Err(e) => {
-            tracing::error!("Failed to retrieve legacy_certificates: {}", e);
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to retrieve legacy_certificates",
-                "message": e.to_string()
-            }))
-        }
-    }
+    to_response_list::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
+        repo.find_all().await,
+    )
+    // match repo.find_all().await {
+    //     Ok(certs) => {
+    //         let dtos: Result<Vec<_>, _> = certs
+    //             .into_iter()
+    //             .map(CertificateResponse::try_from)
+    //             .collect();
+    //         match dtos {
+    //             Ok(valid_dtos) => HttpResponse::Ok().json(valid_dtos),
+    //             Err(e) => {
+    //                 tracing::error!("Failed to convert certificate: {}", e);
+    //                 HttpResponse::UnprocessableEntity().json(serde_json::json!({
+    //                     "error": "Invalid certificate format",
+    //                     "message": e.to_string()
+    //                 }))
+    //             }
+    //         }
+    //     }
+    //     Err(e) => {
+    //         tracing::error!("Failed to retrieve legacy_certificates: {}", e);
+    //         HttpResponse::InternalServerError().json(serde_json::json!({
+    //             "error": "Failed to retrieve legacy_certificates",
+    //             "message": e.to_string()
+    //         }))
+    //     }
+    // }
 }
 
 /*#[tracing::instrument(name = "Create Certificate", skip(pool, payload))]
@@ -135,31 +140,9 @@ pub async fn get_by_id_handler(
     let repo = server::models::certificates::repository::CertificateRepository::new(
         pool.get_ref().clone(),
     );
-
-    use std::convert::TryFrom;
-
-    match repo.find_by_id(cert_id).await {
-        Ok(Some(cert)) => match CertificateDetailsResponse::try_from(cert) {
-            Ok(dto) => HttpResponse::Ok().json(dto),
-            Err(e) => {
-                tracing::error!("Failed to convert certificate: {}", e);
-                HttpResponse::UnprocessableEntity().json(serde_json::json!({
-                    "error": "Invalid certificate format",
-                    "message": e.to_string()
-                }))
-            }
-        },
-        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
-            "error": "Certificate not found"
-        })),
-        Err(e) => {
-            tracing::error!("Failed to retrieve certificate: {}", e);
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to retrieve certificate",
-                "message": e.to_string()
-            }))
-        }
-    }
+    to_response::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
+        repo.find_by_id(cert_id).await,
+    )
 }
 
 /*pub async fn put_handler() -> impl Responder {

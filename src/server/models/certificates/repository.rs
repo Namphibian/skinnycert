@@ -1,7 +1,6 @@
-use crate::server::models::certificates::db::CertificateDetails;
+use crate::server::models::certificates::db::CertificateInfo;
 use crate::server::models::responses::{map_sqlx_error, RepositoryError};
 use sqlx::PgPool;
-use std::error::Error;
 use uuid::Uuid;
 
 pub struct CertificateRepository {
@@ -12,13 +11,10 @@ impl CertificateRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-    pub async fn find_by_id(
-        &self,
-        id: Uuid,
-    ) -> Result<Option<CertificateDetails>, RepositoryError> {
-        let result = sqlx::query_as::<_, CertificateDetails>(
+    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<CertificateInfo>, RepositoryError> {
+        let result = sqlx::query_as::<_, CertificateInfo>(
             r#"
-            SELECT * FROM certificate_details
+            SELECT * FROM certificate_info
             WHERE id = $1
             "#,
         )
@@ -29,15 +25,16 @@ impl CertificateRepository {
 
         Ok(result)
     }
-    pub async fn find_all(&self) -> Result<Vec<CertificateDetails>, Box<dyn Error>> {
-        let results = sqlx::query_as::<_, CertificateDetails>(
+    pub async fn find_all(&self) -> Result<Vec<CertificateInfo>, RepositoryError> {
+        let results = sqlx::query_as::<_, CertificateInfo>(
             r#"
-            SELECT * FROM certificate_details
+            SELECT * FROM certificate_info
             ORDER BY created_on DESC
             "#,
         )
         .fetch_all(&self.pool)
-        .await?;
+        .await
+        .map_err(map_sqlx_error)?;
 
         Ok(results)
     }

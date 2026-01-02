@@ -1,29 +1,53 @@
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-#[derive(Debug, FromRow)]
-pub struct CertificateDetails {
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct CertificateInfo {
+    // Certificate core fields
     pub id: Uuid,
-
-    // PEM data
     pub csr_pem: String,
     pub cert_pem: Option<String>,
     pub key_pem: String,
     pub public_key_pem: String,
     pub chain_pem: Option<String>,
-
-    // Algorithm metadata
     pub key_algorithm_id: Uuid,
-    pub algorithm: String,
-    pub key_size: i32,
-    pub display_name: String,
-    pub deprecated: bool,
+
+    // Expanded algorithm metadata
+    pub key_algorithm_display_name: String,
+    pub key_algorithm_key_strength: i32,
+    pub key_algorithm_nid_value: Option<i32>,
+    pub key_algorithm_created_on: DateTime<Utc>,
+    pub key_algorithm_updated_on: Option<DateTime<Utc>>,
+
+    // Algorithm status
+    pub status_id: Uuid,
+    pub status_name: String,
+    pub status_description: Option<String>,
+    pub status_created_on: DateTime<Utc>,
+    pub status_updated_on: Option<DateTime<Utc>>,
+
+    // Algorithm type
+    pub algorithm_type_id: Uuid,
+    pub algorithm_type_name: String,
+    pub algorithm_type_description: Option<String>,
+    pub algorithm_type_requires_nid: bool,
+    pub algorithm_type_requires_strength: bool,
+    pub algorithm_type_created_on: DateTime<Utc>,
+    pub algorithm_type_updated_on: Option<DateTime<Utc>>,
+
+    // TLS status
+    pub tls_status_id: Uuid,
+    pub tls_status_name: String,
+    pub tls_status_description: Option<String>,
+    pub tls_status_created_on: DateTime<Utc>,
+    pub tls_status_updated_on: Option<DateTime<Utc>>,
 
     // Subject details
-    pub organization: Option<String>,
+    pub organization: String,
     pub organizational_unit: Option<String>,
-    pub country: Option<String>,
+    pub country: String,
     pub state_or_province: Option<String>,
     pub locality: Option<String>,
     pub email: Option<String>,

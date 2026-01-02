@@ -2,10 +2,11 @@ use crate::server::models::key_algorithm_types::db::KeyAlgorithmTypeInfo;
 use crate::server::routes::conversions::ConversionError;
 use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResponse;
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmTypeResponse {
     pub id: Uuid,
     pub name: String,
@@ -44,6 +45,7 @@ impl TryFrom<KeyAlgorithmTypeInfo> for KeyAlgorithmTypeResponse {
                 name: info.key_algorithm_type_tls_status_name,
                 description: info.key_algorithm_type_tls_status_description,
                 created_on: info.key_algorithm_type_tls_status_created_on,
+                updated_on: info.key_algorithm_type_tls_status_updated_on,
             },
         })
     }

@@ -1,5 +1,5 @@
 mod handler;
-mod model;
+mod dto;
 
 use actix_web::web;
 use handler::{get_handler, post_handler};

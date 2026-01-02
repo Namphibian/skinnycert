@@ -5,11 +5,13 @@ use serde::Serialize;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmStatusResponse {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
     pub created_on: DateTime<Utc>,
+    pub updated_on: Option<DateTime<Utc>>,
 }
 
 impl TryFrom<KeyAlgorithmStatus> for KeyAlgorithmStatusResponse {
@@ -28,6 +30,7 @@ impl TryFrom<KeyAlgorithmStatus> for KeyAlgorithmStatusResponse {
             name: value.name,
             description: value.description,
             created_on: value.base.created_on,
+            updated_on: value.base.updated_on,
         })
     }
 }

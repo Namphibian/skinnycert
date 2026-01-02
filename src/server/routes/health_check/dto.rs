@@ -2,7 +2,7 @@ use serde::Serialize;
 
 /// Represents the JSON payload returned by the `/health` endpoint.
 ///
-/// The health check response wraps detailed system and process
+/// The health check response wraps a detailed system and processes 
 /// memory usage information inside a [`MemoryInfo`] struct.
 ///
 /// # Example
@@ -18,6 +18,7 @@ use serde::Serialize;
 /// This structure is serialized automatically by Actix Web when returned
 /// with `HttpResponse::Ok().json(HealthCheckResponse { ... })`.
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HealthCheckResponse {
     /// Contains system and process memory metrics.
     pub memory_info: MemoryInfo,
@@ -29,6 +30,7 @@ pub struct HealthCheckResponse {
 /// low-level runtime information useful for diagnostics, monitoring,
 /// and container health checks.
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MemoryInfo {
     /// Amount of free system memory (RAM) available, in kilobytes.
     ///

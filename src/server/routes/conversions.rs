@@ -1,13 +1,64 @@
-//! The conversion error is used when converting between DB model and DTO objects.
-//! Why do we check conversions from the db to dto?
-//! This is to protect against invalid data being passed to the client.
-//! Since we are dealing with cryptography here we need to protect against a database containing compromised values.
-//! Overkill? I hope it is, but it's better to be safe than sorry.
+//! Conversion errors used when transforming database models into DTOs.
+//!
+//! ## Why validate DB → DTO conversions?
+//!
+//! Even though the database enforces constraints, we treat all data coming from
+//! persistent storage as potentially untrusted. This is especially important in
+//! a cryptographic system, where malformed, inconsistent, or compromised values
+//! could weaken security guarantees or cause unsafe behavior.
+//!
+//! By validating every field during conversion, we ensure that:
+//! - Only well‑formed, expected values reach the API layer.
+//! - Corrupted or tampered database entries are detected early.
+//! - Domain invariants are enforced consistently.
+//! - Unsafe or forbidden cryptographic parameters never propagate outward.
+//!
+//! This level of defensive validation may seem excessive, but in cryptography
+//! it is a deliberate design choice. It is far safer to fail loudly during
+//! conversion than to silently accept values that could compromise the system.
 
-#[derive(Debug, thiserror::Error)]
+use thiserror::Error;
+use crate::server::models::certificates::db::CertificateInfo;
+use crate::server::routes::key_statuses::dto::KeyAlgorithmStatusResponse;
+use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResponse;
+use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
+
+#[derive(Debug, Error)]
 pub enum ConversionError {
+    /// A required field was missing in the database model.
     #[error("Missing required field: {0}")]
     MissingField(&'static str),
+
+    /// A field contained an invalid or unexpected value.
     #[error("Invalid value for field {0}: {1}")]
     InvalidValue(&'static str, String),
+
+    /// A field failed to parse into the expected type.
+    #[error("Failed to parse field {0}: {1}")]
+    ParseError(&'static str, String),
+
+    /// A referenced entity was expected but not found.
+    #[error("Missing related entity: {0}")]
+    MissingRelation(&'static str),
+
+    /// A field contained a value that violates domain rules.
+    #[error("Domain violation in field {0}: {1}")]
+    DomainViolation(&'static str, String),
+
+    /// A cryptographic parameter was invalid or unsupported.
+    #[error("Invalid cryptographic parameter in field {0}: {1}")]
+    CryptoParameter(&'static str, String),
+
+    /// A field contained a value outside the allowed range.
+    #[error("Out-of-range value for field {0}: {1}")]
+    OutOfRange(&'static str, String),
+
+    /// A field contained a value that is inconsistent with other fields.
+    #[error("Inconsistent value for field {0}: {1}")]
+    Inconsistent(&'static str, String),
+
+    /// A field contained a value that should never appear in a trusted DB.
+    #[error("Unexpected or forbidden value for field {0}: {1}")]
+    ForbiddenValue(&'static str, String),
 }
+

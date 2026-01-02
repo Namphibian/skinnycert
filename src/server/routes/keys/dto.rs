@@ -3,10 +3,11 @@ use crate::server::routes::conversions::ConversionError;
 use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResponse;
 use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmStatusResponse {
     pub id: Uuid,
     pub name: String,
@@ -15,7 +16,8 @@ pub struct KeyAlgorithmStatusResponse {
     pub updated_on: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmResponse {
     // key_algorithms
     pub id: Uuid,
@@ -86,6 +88,7 @@ impl TryFrom<KeyAlgorithmInfo> for KeyAlgorithmResponse {
                     name: info.tls_status_name,
                     description: info.tls_status_description,
                     created_on: info.tls_status_created_on,
+                    updated_on: info.tls_status_updated_on,
                 },
             },
         })

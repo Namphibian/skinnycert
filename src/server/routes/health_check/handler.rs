@@ -1,4 +1,4 @@
-use crate::server::routes::health_check::model::{HealthCheckResponse, MemoryInfo};
+use crate::server::routes::health_check::dto::{HealthCheckResponse, MemoryInfo};
 use actix_web::{HttpResponse, Responder};
 use std::fs;
 

@@ -5,11 +5,13 @@ use actix_web::{web, HttpResponse, Responder, ResponseError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ErrorResponse {
     pub error: String,
     pub details: Option<String>,
 }
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct KeyPairResponse {
     pub public_key: String,
     pub private_key: String,

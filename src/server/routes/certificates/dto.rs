@@ -3,26 +3,18 @@ use crate::server::models::legacy_certificates::certificates_model::{
 };
 use crate::server::models::legacy_certificates::db::DbCertificateWithSans;
 
-use crate::server::models::certificates::db::CertificateDetails;
+use crate::server::models::certificates::db::CertificateInfo;
+use crate::server::routes::conversions::ConversionError;
+use crate::server::routes::keys::dto::{KeyAlgorithmResponse, KeyAlgorithmStatusResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResponse;
+use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RecordMetadata {
-    pub id: Uuid,
-    pub created_on: DateTime<Utc>,
-    pub updated_on: DateTime<Utc>,
-    pub cert_uploaded_on: Option<DateTime<Utc>>,
-    pub deleted_on: Option<DateTime<Utc>>,
-    pub is_signed: bool,
-    pub is_expired: bool,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PemData {
+pub struct PemDataResponse {
     pub csr_pem: String,
     pub cert_pem: Option<String>,
     pub key_pem: String,
@@ -32,16 +24,7 @@ pub struct PemData {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct KeyAlgorithmData {
-    pub id: Uuid,
-    pub algorithm: String,
-    pub key_size: i32,
-    pub display_name: String,
-    pub deprecated: bool,
-}
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SubjectData {
+pub struct SubjectDataResponse {
     // Subject details
     pub organization: Option<String>,
     pub organizational_unit: Option<String>,
@@ -52,14 +35,14 @@ pub struct SubjectData {
 }
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SansData {
+pub struct SansDataResponse {
     // SANs
     pub sans: Vec<String>,
     pub common_name: Option<String>,
 }
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct X509Metadata {
+pub struct X509MetadataResponse {
     // Certificate metadata
     pub fingerprint: Option<String>,
     pub valid_from: Option<DateTime<Utc>>,
@@ -67,60 +50,82 @@ pub struct X509Metadata {
 }
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CertificateDetailsResponse {
-    pub metadata: RecordMetadata,
-    pub pem: PemData,
-    pub key_algorithm: KeyAlgorithmData,
-    pub subject: SubjectData,
-    pub sans: SansData,
-    pub x509: X509Metadata,
+pub struct CertificateInfoResponse {
+    pub id: Uuid,
+    pub created_on: DateTime<Utc>,
+    pub updated_on: DateTime<Utc>,
+    pub cert_uploaded_on: Option<DateTime<Utc>>,
+    pub deleted_on: Option<DateTime<Utc>>,
+    pub is_signed: bool,
+    pub is_expired: bool,
+    pub pem: PemDataResponse,
+    pub key_algorithm: KeyAlgorithmResponse,
+    pub subject: SubjectDataResponse,
+    pub sans: SansDataResponse,
+    pub x509: X509MetadataResponse,
 }
-impl TryFrom<CertificateDetails> for CertificateDetailsResponse {
-    type Error = anyhow::Error;
-
-    fn try_from(c: CertificateDetails) -> Result<Self, Self::Error> {
+impl TryFrom<CertificateInfo> for CertificateInfoResponse {
+    type Error = ConversionError;
+    fn try_from(c: CertificateInfo) -> Result<Self, Self::Error> {
         Ok(Self {
-            metadata: RecordMetadata {
-                id: c.id,
-                created_on: c.created_on,
-                updated_on: c.updated_on,
-                cert_uploaded_on: c.cert_uploaded_on,
-                deleted_on: c.deleted_on,
-                is_signed: c.is_signed,
-                is_expired: c.is_expired,
-            },
-
-            pem: PemData {
+            id: c.id,
+            created_on: c.created_on,
+            updated_on: c.updated_on,
+            cert_uploaded_on: c.cert_uploaded_on,
+            deleted_on: c.deleted_on,
+            is_signed: c.is_signed,
+            is_expired: c.is_expired,
+            pem: PemDataResponse {
                 csr_pem: c.csr_pem,
                 cert_pem: c.cert_pem,
                 key_pem: c.key_pem,
                 public_key_pem: c.public_key_pem,
                 chain_pem: c.chain_pem,
             },
-
-            key_algorithm: KeyAlgorithmData {
+            key_algorithm: KeyAlgorithmResponse {
                 id: c.key_algorithm_id,
-                algorithm: c.algorithm,
-                key_size: c.key_size,
-                display_name: c.display_name,
-                deprecated: c.deprecated,
+                display_name: c.key_algorithm_display_name,
+                key_strength: Some(c.key_algorithm_key_strength),
+                nid_value: c.key_algorithm_nid_value,
+                created_on: c.key_algorithm_created_on,
+                updated_on: c.key_algorithm_updated_on,
+                algorithm_status: KeyAlgorithmStatusResponse{
+                    id: c.status_id,
+                    name: c.status_name.clone(),
+                    description: c.status_description.clone(),
+                    created_on: c.status_created_on,
+                    updated_on: c.status_updated_on,
+                },
+                algorithm_type: KeyAlgorithmTypeResponse{
+                    id: c.algorithm_type_id,
+                    name: c.algorithm_type_name.clone(),
+                    description: c.algorithm_type_description,
+                    requires_nid: c.algorithm_type_requires_nid,
+                    requires_strength: c.algorithm_type_requires_strength,
+                    created_on: c.algorithm_type_created_on,
+                    updated_on: c.algorithm_type_updated_on,
+                    tls_status: KeyAlgorithmTlsStatusResponse {
+                        id: c.tls_status_id,
+                        name: c.tls_status_name.clone(),
+                        description: c.tls_status_description.clone(),
+                        created_on: c.tls_status_created_on,
+                        updated_on: c.tls_status_updated_on
+                    },
+                }
             },
-
-            subject: SubjectData {
-                organization: c.organization,
+            subject: SubjectDataResponse {
+                organization: Some(c.organization),
                 organizational_unit: c.organizational_unit,
-                country: c.country,
+                country: Some(c.country),
                 state_or_province: c.state_or_province,
                 locality: c.locality,
                 email: c.email,
             },
-
-            sans: SansData {
+            sans: SansDataResponse {
                 sans: c.sans,
                 common_name: c.common_name,
             },
-
-            x509: X509Metadata {
+            x509: X509MetadataResponse {
                 fingerprint: c.fingerprint,
                 valid_from: c.valid_from,
                 valid_to: c.valid_to,
