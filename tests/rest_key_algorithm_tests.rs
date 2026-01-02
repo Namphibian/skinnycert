@@ -6,6 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmResponse {
     pub id: Uuid,
     pub display_name: String,
@@ -18,6 +19,7 @@ pub struct KeyAlgorithmResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AlgorithmStatusResponse {
     pub id: Uuid,
     pub name: String,
@@ -27,6 +29,7 @@ pub struct AlgorithmStatusResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AlgorithmTypeResponse {
     pub id: Uuid,
     pub name: String,
@@ -39,6 +42,7 @@ pub struct AlgorithmTypeResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TlsStatusResponse {
     pub id: Uuid,
     pub name: String,

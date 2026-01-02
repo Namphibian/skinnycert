@@ -258,6 +258,7 @@ pub enum RepositoryError {
 /// - The function is intended to simplify error handling and provide domain-specific error types
 ///   in a PostgreSQL-backed application.
 /// - This implementation depends on the `sqlx` and `thiserror` crates.
+#[tracing::instrument(name = "Map PostrgeSQL error to SQL Errors",level = tracing::Level::DEBUG)]
 pub fn map_sqlx_error(e: sqlx::Error) -> RepositoryError {
     if let sqlx::Error::Database(db_err) = &e {
         if let Some(pg_err) = db_err.try_downcast_ref::<PgDatabaseError>() {
