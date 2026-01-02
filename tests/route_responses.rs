@@ -8,6 +8,7 @@ use skinnycert::server::routes::responses::{
 };
 
 #[derive(Serialize)]
+#[derive(Debug)]
 struct MockModel {
     id: i32,
 }
@@ -179,6 +180,7 @@ async fn test_to_patch_response_not_found() {
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
+#[derive(Debug)]
 struct MockKeyAlg;
 impl KeyPair for MockKeyAlg {
     fn generate_key_pair(&self) -> Result<(String, String), Box<dyn std::error::Error>> {

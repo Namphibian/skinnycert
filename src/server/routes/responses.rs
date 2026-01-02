@@ -17,6 +17,7 @@ pub struct KeyPairResponse {
     pub private_key: String,
 }
 impl ResponseError for RepositoryError {
+    #[tracing::instrument(name = "Response status_code",level = tracing::Level::DEBUG)]
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
             RepositoryError::UniqueViolation { .. } => actix_web::http::StatusCode::CONFLICT, // 409
@@ -43,6 +44,7 @@ impl ResponseError for RepositoryError {
         }
     }
 
+    #[tracing::instrument(name = "Response error_response",level = tracing::Level::DEBUG)]
     fn error_response(&self) -> HttpResponse {
         let body = ErrorResponse {
             error: self.to_string(),
@@ -62,11 +64,13 @@ impl ResponseError for RepositoryError {
         HttpResponse::build(self.status_code()).json(body)
     }
 }
+
+#[tracing::instrument(name = "To Response List",level = tracing::Level::DEBUG)]
 pub fn to_response_list<M, D, E>(result: Result<Vec<M>, E>) -> HttpResponse
 where
     D: TryFrom<M> + serde::Serialize,
     D::Error: std::fmt::Display,
-    E: Into<RepositoryError> + std::fmt::Display,
+    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug, M: std::fmt::Debug
 {
     match result {
         Ok(models) => {
@@ -100,11 +104,12 @@ where
     }
 }
 
+#[tracing::instrument(name = "To Response ",level = tracing::Level::DEBUG)]
 pub fn to_response<M, D, E>(result: Result<Option<M>, E>) -> HttpResponse
 where
     D: TryFrom<M> + serde::Serialize,
     D::Error: std::fmt::Display,
-    E: Into<RepositoryError> + std::fmt::Display,
+    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug, M: std::fmt::Debug
 {
     match result {
         Ok(Some(model)) => match D::try_from(model) {
@@ -137,12 +142,12 @@ where
         }
     }
 }
-
+#[tracing::instrument(name = "To Patch Response ",level = tracing::Level::DEBUG)]
 pub fn to_patch_response<M, D, E>(result: Result<PatchResult<M>, E>) -> HttpResponse
 where
     D: TryFrom<M> + serde::Serialize,
     D::Error: std::fmt::Display,
-    E: Into<RepositoryError> + std::fmt::Display,
+    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug, M: std::fmt::Debug
 {
     match result {
         Ok(PatchResult::Updated(model)) => {
@@ -178,13 +183,14 @@ where
         }
     }
 }
+#[tracing::instrument(name = "To Kery Pair Response",level = tracing::Level::DEBUG)]
 pub fn key_pair_response<M, E>(
     result: Result<Option<M>, E>,
     not_found_msg: &'static str,
 ) -> HttpResponse
 where
-    M: KeyPair,
-    E: Into<RepositoryError> + std::fmt::Display,
+    M: KeyPair + std::fmt::Debug,
+    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug,
 {
     match result {
         Ok(Some(model)) => match model.generate_key_pair() {

@@ -2,6 +2,7 @@ use crate::server::models::key_algorithm_statuses::db::KeyAlgorithmStatus;
 use crate::server::models::responses::{map_sqlx_error, RepositoryError};
 use sqlx::PgPool;
 
+#[derive(Debug)]
 pub struct KeyAlgorithmStatusRepository {
     pool: PgPool,
 }

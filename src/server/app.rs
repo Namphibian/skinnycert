@@ -1,4 +1,5 @@
 use crate::server::logger::SkinnycertRouteSpanBuilder;
+use crate::server::routes::certificates::configure_certificate_route;
 use crate::server::routes::health_check::configure_health_check;
 use crate::server::routes::key_statuses::configure_key_algorithm_status_routes;
 use crate::server::routes::key_type_tls_statuses::configure_key_algorithm_type_tls_status_routes;
@@ -9,7 +10,6 @@ use actix_web::{web, App, HttpServer};
 use sqlx::PgPool;
 use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
-use crate::server::routes::certificates::configure_certificate_route;
 
 pub fn run(
     listener: TcpListener,

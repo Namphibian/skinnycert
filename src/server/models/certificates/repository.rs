@@ -3,6 +3,7 @@ use crate::server::models::responses::{map_sqlx_error, RepositoryError};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub struct CertificateRepository {
     pool: PgPool,
 }
@@ -11,6 +12,7 @@ impl CertificateRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
+    #[tracing::instrument(name = "DB Read Certificate By ID",level = tracing::Level::DEBUG)]
     pub async fn find_by_id(&self, id: Uuid) -> Result<Option<CertificateInfo>, RepositoryError> {
         let result = sqlx::query_as::<_, CertificateInfo>(
             r#"
@@ -25,6 +27,7 @@ impl CertificateRepository {
 
         Ok(result)
     }
+    #[tracing::instrument(name = "DB Read All Certificates ",level = tracing::Level::DEBUG)]
     pub async fn find_all(&self) -> Result<Vec<CertificateInfo>, RepositoryError> {
         let results = sqlx::query_as::<_, CertificateInfo>(
             r#"

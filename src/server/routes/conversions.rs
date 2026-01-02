@@ -18,10 +18,7 @@
 //! conversion than to silently accept values that could compromise the system.
 
 use thiserror::Error;
-use crate::server::models::certificates::db::CertificateInfo;
-use crate::server::routes::key_statuses::dto::KeyAlgorithmStatusResponse;
-use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResponse;
-use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
+
 
 #[derive(Debug, Error)]
 pub enum ConversionError {
@@ -61,4 +58,38 @@ pub enum ConversionError {
     #[error("Unexpected or forbidden value for field {0}: {1}")]
     ForbiddenValue(&'static str, String),
 }
+
+pub fn validate_optional_str(
+    field: &'static str,
+    value: &Option<String>,
+    max_len: usize,
+) -> Result<(), ConversionError> {
+    if let Some(v) = value {
+        if v.trim().is_empty() {
+            return Err(ConversionError::InvalidValue(
+                field,
+                "Field cannot be empty or whitespace".into(),
+            ));
+        }
+
+        if v.len() > max_len {
+            return Err(ConversionError::OutOfRange(
+                field,
+                format!("Field exceeds maximum length of {}", max_len),
+            ));
+        }
+    }
+    Ok(())
+}
+
+
+pub fn is_valid_dns_name(s: &str) -> bool {
+    let dns_regex = regex::Regex::new(r"^[a-zA-Z0-9.-]+$").unwrap();
+    dns_regex.is_match(s)
+}
+
+pub fn is_valid_ip(s: &str) -> bool {
+    s.parse::<std::net::IpAddr>().is_ok()
+}
+
 

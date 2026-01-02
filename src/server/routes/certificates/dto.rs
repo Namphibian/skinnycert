@@ -4,13 +4,15 @@ use crate::server::models::legacy_certificates::certificates_model::{
 use crate::server::models::legacy_certificates::db::DbCertificateWithSans;
 
 use crate::server::models::certificates::db::CertificateInfo;
-use crate::server::routes::conversions::ConversionError;
+use crate::server::routes::conversions::{
+    is_valid_dns_name, is_valid_ip, validate_optional_str, ConversionError,
+};
+use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResponse;
+use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
 use crate::server::routes::keys::dto::{KeyAlgorithmResponse, KeyAlgorithmStatusResponse};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResponse;
-use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -89,14 +91,14 @@ impl TryFrom<CertificateInfo> for CertificateInfoResponse {
                 nid_value: c.key_algorithm_nid_value,
                 created_on: c.key_algorithm_created_on,
                 updated_on: c.key_algorithm_updated_on,
-                algorithm_status: KeyAlgorithmStatusResponse{
+                algorithm_status: KeyAlgorithmStatusResponse {
                     id: c.status_id,
                     name: c.status_name.clone(),
                     description: c.status_description.clone(),
                     created_on: c.status_created_on,
                     updated_on: c.status_updated_on,
                 },
-                algorithm_type: KeyAlgorithmTypeResponse{
+                algorithm_type: KeyAlgorithmTypeResponse {
                     id: c.algorithm_type_id,
                     name: c.algorithm_type_name.clone(),
                     description: c.algorithm_type_description,
@@ -109,9 +111,9 @@ impl TryFrom<CertificateInfo> for CertificateInfoResponse {
                         name: c.tls_status_name.clone(),
                         description: c.tls_status_description.clone(),
                         created_on: c.tls_status_created_on,
-                        updated_on: c.tls_status_updated_on
+                        updated_on: c.tls_status_updated_on,
                     },
-                }
+                },
             },
             subject: SubjectDataResponse {
                 organization: Some(c.organization),
@@ -155,9 +157,8 @@ pub struct CertificateResponseDto {
 
 /// DTO for creating a new certificate
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CreateCertificateDto {
-    pub key_algorithm: KeyAlgorithm,
-    pub key_strength: KeyStrength,
+pub struct CreateCertificateRequest {
+    pub key_algorithm_id: Uuid,
     pub subject: CertificateSubject,
     pub sans: Vec<String>,
     #[serde(default = "default_validity_days")]
@@ -166,6 +167,71 @@ pub struct CreateCertificateDto {
 
 fn default_validity_days() -> u32 {
     365
+}
+impl CreateCertificateRequest {
+    pub fn validate(&self) -> Result<(), ConversionError> {
+        // --- SAN VALIDATION ---------------------------------------------------
+
+        if self.sans.is_empty() {
+            return Err(ConversionError::DomainViolation(
+                "sans",
+                "At least one SAN entry is required for DV certificates".into(),
+            ));
+        }
+
+        for san in &self.sans {
+            if san.trim().is_empty() {
+                return Err(ConversionError::InvalidValue(
+                    "sans",
+                    "SAN entries cannot be empty".into(),
+                ));
+            }
+
+            // DNS or IP allowed
+            if !(is_valid_dns_name(san) || is_valid_ip(san)) {
+                return Err(ConversionError::InvalidValue(
+                    "sans",
+                    format!(
+                        "Invalid SAN entry it must either be an IP address or a domain: {}",
+                        san
+                    ),
+                ));
+            }
+        }
+
+        // --- SUBJECT VALIDATION ----------------------------------------------
+
+        validate_optional_str("organization", &self.subject.organization, 256)?;
+        validate_optional_str(
+            "organizational_unit",
+            &self.subject.organizational_unit,
+            128,
+        )?;
+        validate_optional_str("state_or_province", &self.subject.state_or_province, 256)?;
+        validate_optional_str("locality", &self.subject.locality, 256)?;
+        validate_optional_str("email", &self.subject.email, 256)?;
+
+        // Country must be exactly 2 chars if present
+        if let Some(country) = &self.subject.country {
+            if country.len() != 2 {
+                return Err(ConversionError::InvalidValue(
+                    "country",
+                    "Country must be a 2‑letter ISO code".into(),
+                ));
+            }
+        }
+
+        // --- VALIDITY DAYS ----------------------------------------------------
+
+        if self.validity_days == 0 {
+            return Err(ConversionError::OutOfRange(
+                "validity_days",
+                "Validity must be at least 1 day".into(),
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 /// DTO for patching a certificate with signed cert from CA

@@ -1,21 +1,16 @@
-use super::dto::{
-    CertificateInfoResponse, CertificateResponseDto, CreateCertificateDto, PatchCertificateDto,
-};
+use super::dto::CertificateInfoResponse;
 use crate::server;
 use crate::server::models::certificates::db::CertificateInfo;
-use crate::server::models::legacy_certificates::certificates_model::CertificateGenerationRequest;
-use crate::server::models::legacy_certificates::repository::CertificateRepository;
+use crate::server::models::certificates::repository::CertificateRepository;
 use crate::server::models::responses::RepositoryError;
 use crate::server::routes::responses::{to_response, to_response_list};
-use actix_web::{web, HttpResponse, Responder};
-use sha2::{Digest, Sha256};
+use actix_web::{web, Responder};
+use sha2::Digest;
 use uuid::Uuid;
-use x509_parser::prelude::FromDer;
-use x509_parser::prelude::X509Certificate;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
 pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
-    let repo = server::models::certificates::repository::CertificateRepository::new(
+    let repo = CertificateRepository::new(
         pool.get_ref().clone(),
     );
     to_response_list::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
@@ -51,10 +46,10 @@ pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
 /*#[tracing::instrument(name = "Create Certificate", skip(pool, payload))]
 pub async fn post_handler(
     pool: web::Data<sqlx::PgPool>,
-    payload: web::Json<CreateCertificateDto>,
+    payload: web::Json<CreateCertificateRequest>,
 ) -> impl Responder {
-    let dto = payload.into_inner();
-
+    let create_certificate_request   = payload.into_inner();
+    
     // Convert DTO to internal request model
     let request = CertificateGenerationRequest {
         key_algorithm: dto.key_algorithm,

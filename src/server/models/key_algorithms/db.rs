@@ -61,6 +61,7 @@ pub struct KeyAlgorithmInfo {
 }
 
 impl KeyPair for KeyAlgorithmInfo {
+    #[tracing::instrument(name = "Key pair generation",level = tracing::Level::DEBUG)]
     fn generate_key_pair(&self) -> Result<(String, String), Box<dyn Error>> {
         let algo = self.algorithm_type_name.to_uppercase();
 
@@ -123,6 +124,7 @@ impl KeyPair for KeyAlgorithmInfo {
         }
     }
 
+    #[tracing::instrument(name = "Verify key pair for a certificate.",level = tracing::Level::DEBUG)]
     fn verify_key_pair(
         &self,
         private_key_pem: String,
@@ -170,7 +172,6 @@ impl KeyPair for KeyAlgorithmInfo {
                     Ok(())
                 }
             }
-
             other => Err(format!("Unsupported algorithm type: {}", other).into()),
         }
     }
