@@ -1,41 +1,101 @@
+---
 execution:
-  - scenario: health
-    concurrency: 128
+  - scenario: rsa_scenario
+    concurrency: 6
     ramp-up: 10s
     hold-for: 1m
     executor: gatling
-#  - scenario: notes
-#    concurrency: 24
-#    ramp-up: 10s
-#    hold-for: 1m
-#    executor: gatling
+
+  - scenario: ecdsa_scenario
+    concurrency: 6
+    ramp-up: 10s
+    hold-for: 1m
+    executor: gatling
+
+settings:
+  env:
+    host: "http://127.0.0.1:9090"
 
 scenarios:
-  health:
-    retrieve-resources: false
-    headers:
-        "Authorization": "Basic aGVhbHRoOmhlYWx0aA=="
-    requests:
-      - url: https://gateway.svc.docker.local:9443/health
-#  notes:
-#    retrieve-resources: false
-#    headers:
-#      "Authorization": "Basic bm90ZTpub3Rl"
-#    requests:
-#      - url: https://gateway.svc.docker.local:9443/note
-##
-services:
-- module: monitoring
-  ~local:
-  - interval: 5s   # polling interval
-    logging: True # local monitoring logs will be saved to "local_monitoring_logs.csv" in the artifacts dir
-    metrics:
-    - cpu
-    - disk-space
-    - engine-loop
 
+  rsa_scenario:
+    default-address: "http://127.0.0.1:9090"
+    headers:
+      Content-Type: application/json
+
+    requests:
+
+#      - label: "RSA: GET /keys"
+#        method: GET
+#        url: "/keys"
+#
+#      - label: "RSA: GET /keys/{id}/keypair"
+#        method: GET
+#        url: "/keys/64d63a36-1593-4896-92b3-ae7887ee7528/keypair"
+
+      - label: "RSA: POST /certificates"
+        method: POST
+        url: "/certificates"
+        body:
+          key_algorithm_id: "64d63a36-1593-4896-92b3-ae7887ee7528"
+          subject:
+            organization: "LoadTest Corp"
+            organizational_unit: "QA"
+            country: "US"
+            state_or_province: "CA"
+            locality: "San Francisco"
+            email: "qa@example.com"
+          sans:
+            - "rsa.loadtest.example.com"
+          validity_days: 365
+
+#      - label: "RSA: GET /certificates"
+#        method: GET
+#        url: "/certificates"
+
+
+  ecdsa_scenario:
+    default-address: "http://127.0.0.1:9090"
+    headers:
+      Content-Type: application/json
+
+    requests:
+
+#      - label: "ECDSA: GET /keys"
+#        method: GET
+#        url: "/keys"
+#
+#      - label: "ECDSA: GET /keys/{id}/keypair"
+#        method: GET
+#        url: "/keys/b9c808cd-48b6-476e-ae1d-42f615456618/keypair"
+
+      - label: "ECDSA: POST /certificates"
+        method: POST
+        url: "/certificates"
+        body:
+          key_algorithm_id: "b9c808cd-48b6-476e-ae1d-42f615456618"
+          subject:
+            organization: "LoadTest Corp"
+            organizational_unit: "QA"
+            country: "US"
+            state_or_province: "CA"
+            locality: "San Francisco"
+            email: "qa@example.com"
+          sans:
+            - "ecdsa.loadtest.example.com"
+          validity_days: 365
+
+#      - label: "ECDSA: GET /certificates"
+#        method: GET
+#        url: "/certificates"
+
+
+reporting:
+  - module: console
+  - module: final-stats
 
 modules:
-    gatling:
-        properties:
-            version: 3.11.3
+  gatling:
+    properties:
+      version: 3.11.3
+      download-link: "https://repo1.maven.org/maven2/io/gatling/highcharts/gatling-charts-highcharts-bundle/3.11.3/gatling-charts-highcharts-bundle-3.11.3-bundle.zip"
