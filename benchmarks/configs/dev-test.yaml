@@ -83,6 +83,8 @@ scenarios:
             email: "qa@example.com"
           sans:
             - "ecdsa.loadtest.example.com"
+            - "ecdsa1.loadtest.example.com"
+            - "ecdsa3.loadtest.example.com"
           validity_days: 365
 
 #      - label: "ECDSA: GET /certificates"

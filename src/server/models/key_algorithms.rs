@@ -19,6 +19,7 @@ pub trait GenerateCertificateSigningRequest {
     fn generate_csr(
         &self,
         private_key_pem: &str,
+        public_key_pem: &str,
         params: &CsrGenerationParams,
     ) -> Result<String, Box<dyn std::error::Error>>;
 }

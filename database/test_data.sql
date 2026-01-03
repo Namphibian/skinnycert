@@ -35,3 +35,6 @@ VALUES
         'fingerprint'
 
     );
+
+TRUNCATE TABLE certificates CASCADE;
+TRUNCATE TABLE certificate_sans;

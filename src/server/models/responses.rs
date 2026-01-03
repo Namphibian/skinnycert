@@ -1,5 +1,6 @@
 use sqlx::postgres::PgDatabaseError;
 use thiserror::Error;
+
 /// Represents the result of a patch operation, indicating whether an item was updated,
 /// not found, or not modified.
 ///
@@ -181,6 +182,9 @@ pub enum RepositoryError {
     #[error("Transaction error: {message}")]
     Transaction { message: String },
 }
+
+
+
 /// Maps an `sqlx::Error` to a custom `RepositoryError`.
 ///
 /// This function is used to translate a generic database or SQL error encountered during

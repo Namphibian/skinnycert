@@ -1,6 +1,6 @@
 use crate::server::models::base::BaseModel;
+use crate::server::models::certificates::db::CsrGenerationParams;
 use crate::server::models::key_algorithms::{GenerateCertificateSigningRequest, KeyPair};
-
 use chrono::{DateTime, Utc};
 use openssl::derive::Deriver;
 use openssl::ec::{EcGroup, EcKey};
@@ -9,10 +9,12 @@ use openssl::nid::Nid;
 use openssl::pkey::{Id, PKey};
 use openssl::rsa::Rsa;
 use openssl::sign::{Signer, Verifier};
+use openssl::stack::Stack;
+use openssl::x509::extension::SubjectAlternativeName;
+use openssl::x509::{X509NameBuilder, X509ReqBuilder};
 use serde::Deserialize;
 use std::error::Error;
 use uuid::Uuid;
-use crate::server::models::certificates::db::CsrGenerationParams;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithm {
@@ -189,19 +191,24 @@ impl KeyPair for KeyAlgorithmInfo {
 }
 
 impl GenerateCertificateSigningRequest for KeyAlgorithmInfo {
+    #[tracing::instrument(name = "Generate a CSR for a certificate.",level = tracing::Level::DEBUG)]
     fn generate_csr(
         &self,
         private_key_pem: &str,
+        public_key_pem: &str,
         params: &CsrGenerationParams,
     ) -> Result<String, Box<dyn std::error::Error>> {
-
-        use openssl::x509::{X509ReqBuilder, X509NameBuilder};
-        use openssl::pkey::PKey;
-
-        let pkey = PKey::private_key_from_pem(private_key_pem.as_bytes())?;
+        let private_key = PKey::private_key_from_pem(private_key_pem.as_bytes())?;
+        let public_key = PKey::public_key_from_pem(public_key_pem.as_bytes())?;
 
         let mut name = X509NameBuilder::new()?;
-
+        // Require at least one SAN entry
+        let cn = params
+            .sans
+            .first()
+            .ok_or("At least one SAN entry is required to derive CN")?;
+        // Insert CN into subject
+        name.append_entry_by_text("CN", cn)?;
         if let Some(ref org) = params.subject.organization {
             name.append_entry_by_text("O", org)?;
         }
@@ -221,32 +228,25 @@ impl GenerateCertificateSigningRequest for KeyAlgorithmInfo {
             name.append_entry_by_text("emailAddress", email)?;
         }
 
-        let name = name.build();
 
+        let name = name.build();
         let mut builder = X509ReqBuilder::new()?;
         builder.set_subject_name(&name)?;
-        builder.set_pubkey(&pkey)?;
-
+        builder.set_pubkey(&public_key)?;
         if !params.sans.is_empty() {
-            use openssl::x509::extension::SubjectAlternativeName;
-            use openssl::stack::Stack;
-
             let mut san = SubjectAlternativeName::new();
             for entry in &params.sans {
                 san.dns(entry);
             }
-
             let san_ext = san.build(&builder.x509v3_context(None))?;
             let mut stack = Stack::new()?;
             stack.push(san_ext)?;
             builder.add_extensions(&stack)?;
         }
 
-        builder.sign(&pkey, openssl::hash::MessageDigest::sha256())?;
-
+        builder.sign(&private_key, openssl::hash::MessageDigest::sha256())?;
         let csr = builder.build();
         let pem = csr.to_pem()?;
-
         Ok(String::from_utf8(pem)?)
     }
 }

@@ -61,33 +61,93 @@ impl CertificateRepository {
             AND ($19 IS NULL OR valid_to >= $19)
             AND ($20 IS NULL OR valid_to <= $20)
         ORDER BY created_on DESC
-        "#
+        "#,
         )
-            .bind(&params.common_name)
-            .bind(&params.san)
-            .bind(&params.organization)
-            .bind(&params.organizational_unit)
-            .bind(&params.country)
-            .bind(&params.state_or_province)
-            .bind(&params.locality)
-            .bind(&params.email)
-            .bind(&params.algorithm_type_name)
-            .bind(&params.key_algorithm_display_name)
-            .bind(params.key_algorithm_key_strength)
-            .bind(params.key_algorithm_nid_value)
-            .bind(&params.tls_status_name)
-            .bind(&params.status_name)
-            .bind(params.is_signed)
-            .bind(params.is_expired)
-            .bind(params.created_after)
-            .bind(params.created_before)
-            .bind(params.valid_to_after)
-            .bind(params.valid_to_before)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(map_sqlx_error)?;
+        .bind(&params.common_name)
+        .bind(&params.san)
+        .bind(&params.organization)
+        .bind(&params.organizational_unit)
+        .bind(&params.country)
+        .bind(&params.state_or_province)
+        .bind(&params.locality)
+        .bind(&params.email)
+        .bind(&params.algorithm_type_name)
+        .bind(&params.key_algorithm_display_name)
+        .bind(params.key_algorithm_key_strength)
+        .bind(params.key_algorithm_nid_value)
+        .bind(&params.tls_status_name)
+        .bind(&params.status_name)
+        .bind(params.is_signed)
+        .bind(params.is_expired)
+        .bind(params.created_after)
+        .bind(params.created_before)
+        .bind(params.valid_to_after)
+        .bind(params.valid_to_before)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(map_sqlx_error)?;
 
         Ok(results)
     }
+    pub async fn create(
+        &self,
+        csr_pem: &str,
+        key_pem: &str,
+        public_key_pem: &str,
+        key_algorithm_id: Uuid,
+        organization: Option<&str>,
+        organizational_unit: Option<&str>,
+        country: Option<&str>,
+        state_or_province: Option<&str>,
+        locality: Option<&str>,
+        email: Option<&str>,
+        sans: &[String],
+    ) -> Result<Uuid, RepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(map_sqlx_error)?;
 
+        // Insert certificate
+        let cert_id: Uuid = sqlx::query_scalar(
+            r#"
+                    INSERT INTO certificates (
+                        csr_pem, key_pem, public_key_pem, key_algorithm_id,
+                        organization, organizational_unit, country, state_or_province, locality, email
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    RETURNING id
+                "#,
+        )
+            .bind(csr_pem)
+            .bind(key_pem)
+            .bind(public_key_pem)
+            .bind(key_algorithm_id)
+            .bind(organization)
+            .bind(organizational_unit)
+            .bind(country)
+            .bind(state_or_province)
+            .bind(locality)
+            .bind(email)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(map_sqlx_error)?;
+
+        // Insert SANs
+        for (index, san) in sans.iter().enumerate() {
+            sqlx::query(
+                r#"
+            INSERT INTO certificate_sans (certificate_id, san_value, san_order)
+            VALUES ($1, $2, $3)
+            "#,
+            )
+            .bind(cert_id)
+            .bind(san)
+            .bind(index as i32)
+            .execute(&mut *tx)
+            .await
+            .map_err(map_sqlx_error)?;
+        }
+
+        tx.commit().await.map_err(map_sqlx_error)?;
+
+        Ok(cert_id)
+    }
 }
