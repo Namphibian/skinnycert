@@ -1,54 +1,7 @@
 mod common;
 use common::spawn_app;
-
-use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use uuid::Uuid;
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct KeyAlgorithmResponse {
-    pub id: Uuid,
-    pub display_name: String,
-    pub key_strength: Option<i32>,
-    pub nid_value: Option<i32>,
-    pub created_on: DateTime<Utc>,
-    pub updated_on: Option<DateTime<Utc>>,
-    pub algorithm_status: AlgorithmStatusResponse,
-    pub algorithm_type: AlgorithmTypeResponse,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AlgorithmStatusResponse {
-    pub id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub created_on: DateTime<Utc>,
-    pub updated_on: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AlgorithmTypeResponse {
-    pub id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub requires_nid: bool,
-    pub requires_strength: bool,
-    pub tls_status: TlsStatusResponse,
-    pub created_on: DateTime<Utc>,
-    pub updated_on: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TlsStatusResponse {
-    pub id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub created_on: DateTime<Utc>,
-}
+use skinnycert::server::routes::keys::dto::KeyAlgorithmResponse;
 
 #[tokio::test]
 async fn get_all_keys_and_generate_key_pair_test() {
@@ -68,24 +21,20 @@ async fn get_all_keys_and_generate_key_pair_test() {
         "GET /keys should return 200 OK"
     );
 
-    let body = response
-        .text()
+    let keys: Vec<KeyAlgorithmResponse> = response
+        .json()
         .await
-        .expect("Failed to read GET /keys body");
+        .expect("Failed to deserialize /keys response");
 
-    assert!(!body.is_empty(), "GET /keys should return non-empty body");
+    assert!(!keys.is_empty(), "Expected at least one key algorithm");
 
-    // Deserialize JSON array of keys
-    let keys: Vec<KeyAlgorithmResponse> =
-        serde_json::from_str(&body).expect("Failed to deserialize /keys response");
+    // --- Act + Assert: For each key ---
+    for key in &keys {
+        println!("Testing key: {:?}", key);
 
-    assert!(
-        !keys.is_empty(),
-        "Expected at least one key algorithm in the database"
-    );
-
-    // --- Act + Assert: For each key, generate a keypair ---
-    for key in keys {
+        // ---------------------------------------------------------
+        // 1. Keypair generation test
+        // ---------------------------------------------------------
         let url = format!("{}/keys/{}/keypair", &address, key.id);
 
         let resp = client
@@ -100,16 +49,148 @@ async fn get_all_keys_and_generate_key_pair_test() {
             key.id
         );
 
-        let body = resp
-            .text()
+        let body = resp.text().await.expect("Failed to read keypair response");
+        assert!(!body.is_empty(), "Keypair response should not be empty");
+        println!("Keypair response: {}", body);
+        // ---------------------------------------------------------
+        // 2. Filter tests (inside the loop)
+        // ---------------------------------------------------------
+
+        // Filter by algorithm_type_name
+        let resp = client
+            .get(&format!(
+                "{}/keys?algorithm_type={}",
+                &address, key.algorithm_type.name
+            ))
+            .send()
             .await
-            .expect("Failed to read keypair generation response");
+            .expect("Failed to GET /keys?algorithm_type");
 
         assert!(
-            !body.is_empty(),
-            "Keypair generation response should not be empty"
+            resp.status().is_success(),
+            "Filter by algorithm_type_name failed for key {}",
+            key.id
+        );
+        println!("Filter by algorithm_type_name: {:?}", resp);
+        let filtered: Vec<KeyAlgorithmResponse> = resp
+            .json()
+            .await
+            .expect("Failed to deserialize filtered keys");
+
+        assert!(
+            !filtered.is_empty(),
+            "Filtering by algorithm_type_name should return >= 1 row"
         );
 
-        println!("Generated keypair for key {}: {}", key.id, body);
+        // Filter by tls_status_name
+        let resp = client
+            .get(&format!(
+                "{}/keys?tls_status={}",
+                &address, key.algorithm_type.tls_status.name
+            ))
+            .send()
+            .await
+            .expect("Failed to GET /keys?tls_status");
+
+        assert!(
+            resp.status().is_success(),
+            "Filter by tls_status failed for key {}",
+            key.id
+        );
+        println!("Filter by tls_status: {:?}", resp);
+        let filtered: Vec<KeyAlgorithmResponse> = resp
+            .json()
+            .await
+            .expect("Failed to deserialize filtered keys");
+
+        assert!(
+            !filtered.is_empty(),
+            "Filtering by tls_status should return >= 1 row"
+        );
+
+        // Filter by algorithm_status (status_name)
+        let resp = client
+            .get(&format!(
+                "{}/keys?algorithm_status={}",
+                &address, key.algorithm_status.name
+            ))
+            .send()
+            .await
+            .expect("Failed to GET /keys?algorithm_status");
+
+        assert!(
+            resp.status().is_success(),
+            "Filter by algorithm_status failed for key {}",
+            key.id
+        );
+        println!("Filter by algorithm_status: {:?}", resp);
+        let filtered: Vec<KeyAlgorithmResponse> = resp
+            .json()
+            .await
+            .expect("Failed to deserialize filtered keys");
+
+        assert!(
+            !filtered.is_empty(),
+            "Filtering by algorithm_status should return >= 1 row"
+        );
+
+        // Filter by strength
+        if let Some(strength) = key.key_strength {
+            let resp = client
+                .get(&format!("{}/keys?strength={}", &address, strength))
+                .send()
+                .await
+                .expect("Failed to GET /keys?strength");
+            assert!(
+                resp.status().is_success(),
+                "Filter by strength failed for key {}",
+                key.id
+            );
+            let filtered: Vec<KeyAlgorithmResponse> = resp
+                .json()
+                .await
+                .expect("Failed to deserialize filtered keys");
+            assert!(
+                !filtered.is_empty(),
+                "Filtering by strength should return >= 1 row"
+            );
+        } else {
+            println!(
+                "Skipping strength filter test for key {} (no strength)",
+                key.id
+            );
+        }
+        // ---------------------------------------------------------
+        // 3. Combined filter test (all filters together)
+        // ---------------------------------------------------------
+        let mut url = format!(
+            "{}/keys?algorithm_type={}&tls_status={}&algorithm_status={}",
+            &address,
+            key.algorithm_type.name,
+            key.algorithm_type.tls_status.name,
+            key.algorithm_status.name,
+        ); // Only include strength if present if let Some(strength) = key.key_strength { url.push_str(&format!("&strength={}", strength)); }
+
+        let resp = client
+            .get(&url)
+            .send()
+            .await
+            .expect("Failed to GET /keys with combined filters");
+
+        assert!(
+            resp.status().is_success(),
+            "Combined filter request should return 200 OK for key {}",
+            key.id
+        );
+        println!("Combined filter response: {:?}", resp);
+        let filtered: Vec<KeyAlgorithmResponse> = resp
+            .json()
+            .await
+            .expect("Failed to deserialize combined filter response");
+
+        assert!(
+            !filtered.is_empty(),
+            "Combined filter should return >= 1 row"
+        );
     }
 }
