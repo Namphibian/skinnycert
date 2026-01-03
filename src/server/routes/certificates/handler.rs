@@ -1,6 +1,6 @@
 use super::dto::CertificateInfoResponse;
 use crate::server;
-use crate::server::models::certificates::db::CertificateInfo;
+use crate::server::models::certificates::db::{CertificateFilterParams, CertificateInfo};
 use crate::server::models::certificates::repository::CertificateRepository;
 use crate::server::models::responses::RepositoryError;
 use crate::server::routes::responses::{to_response, to_response_list};
@@ -9,12 +9,13 @@ use sha2::Digest;
 use uuid::Uuid;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
-pub async fn get_handler(pool: web::Data<sqlx::PgPool>) -> impl Responder {
+pub async fn get_handler(pool: web::Data<sqlx::PgPool>,     query: web::Query<CertificateFilterParams>,) -> impl Responder {
     let repo = CertificateRepository::new(
         pool.get_ref().clone(),
     );
+    let filter = query.into_inner();
     to_response_list::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
-        repo.find_all().await,
+        repo.find_all(&filter).await,
     )
     // match repo.find_all().await {
     //     Ok(certs) => {

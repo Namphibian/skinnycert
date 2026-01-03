@@ -9,6 +9,7 @@ use openssl::nid::Nid;
 use openssl::pkey::{Id, PKey};
 use openssl::rsa::Rsa;
 use openssl::sign::{Signer, Verifier};
+use serde::Deserialize;
 use std::error::Error;
 use uuid::Uuid;
 
@@ -23,6 +24,15 @@ pub struct KeyAlgorithm {
     pub display_name: String,
     pub deprecated: bool,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct KeyAlgorithmFilterParams {
+    pub algorithm_type: Option<String>,
+    pub tls_status: Option<String>,
+    pub algorithm_status: Option<String>,
+    pub strength: Option<i32>,
+}
+
 #[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithmInfo {
     // key_algorithms
