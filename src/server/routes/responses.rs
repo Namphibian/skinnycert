@@ -182,7 +182,7 @@ where
         }
     }
 }
-#[tracing::instrument(name = "To Kery Pair Response",level = tracing::Level::DEBUG)]
+#[tracing::instrument(name = "To Key Pair Response",level = tracing::Level::DEBUG)]
 pub fn key_pair_response<M, E>(
     result: Result<Option<M>, E>,
     not_found_msg: &'static str,

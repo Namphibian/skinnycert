@@ -163,7 +163,7 @@ async fn get_all_keys_and_generate_key_pair_test() {
         // ---------------------------------------------------------
         // 3. Combined filter test (all filters together)
         // ---------------------------------------------------------
-        let mut url = format!(
+        let url = format!(
             "{}/keys?algorithm_type={}&tls_status={}&algorithm_status={}",
             &address,
             key.algorithm_type.name,

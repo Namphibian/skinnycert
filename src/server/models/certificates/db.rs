@@ -114,6 +114,24 @@ pub struct CertificateSan {
     pub san_order: i32,
     pub created_on: DateTime<Utc>,
 }
+
+
+#[derive(Debug, Clone)]
+pub struct CertificateSubjectFields {
+    pub organization: Option<String>,
+    pub organizational_unit: Option<String>,
+    pub country: Option<String>,
+    pub state_or_province: Option<String>,
+    pub locality: Option<String>,
+    pub email: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CsrGenerationParams {
+    pub subject: CertificateSubjectFields,
+    pub sans: Vec<String>,
+}
+
 /// ```rust
 /// Represents a set of filterable parameters for querying and identifying certificates.
 ///

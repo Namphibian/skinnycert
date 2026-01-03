@@ -1,131 +1,149 @@
-use super::dto::CertificateInfoResponse;
+use super::dto::{CertificateInfoResponse, CreateCertificateRequest};
 use crate::server;
-use crate::server::models::certificates::db::{CertificateFilterParams, CertificateInfo};
+use crate::server::models::certificates::db::{
+    CertificateFilterParams, CertificateInfo, CertificateSubjectFields, CsrGenerationParams,
+};
 use crate::server::models::certificates::repository::CertificateRepository;
+use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
+use crate::server::models::key_algorithms::{GenerateCertificateSigningRequest, KeyPair};
 use crate::server::models::responses::RepositoryError;
 use crate::server::routes::responses::{to_response, to_response_list};
-use actix_web::{web, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use sha2::Digest;
 use uuid::Uuid;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
-pub async fn get_handler(pool: web::Data<sqlx::PgPool>,     query: web::Query<CertificateFilterParams>,) -> impl Responder {
-    let repo = CertificateRepository::new(
-        pool.get_ref().clone(),
-    );
+pub async fn get_handler(
+    pool: web::Data<sqlx::PgPool>,
+    query: web::Query<CertificateFilterParams>,
+) -> impl Responder {
+    let repo = CertificateRepository::new(pool.get_ref().clone());
     let filter = query.into_inner();
     to_response_list::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
         repo.find_all(&filter).await,
     )
-    // match repo.find_all().await {
-    //     Ok(certs) => {
-    //         let dtos: Result<Vec<_>, _> = certs
-    //             .into_iter()
-    //             .map(CertificateResponse::try_from)
-    //             .collect();
-    //         match dtos {
-    //             Ok(valid_dtos) => HttpResponse::Ok().json(valid_dtos),
-    //             Err(e) => {
-    //                 tracing::error!("Failed to convert certificate: {}", e);
-    //                 HttpResponse::UnprocessableEntity().json(serde_json::json!({
-    //                     "error": "Invalid certificate format",
-    //                     "message": e.to_string()
-    //                 }))
-    //             }
-    //         }
-    //     }
+}
+
+#[tracing::instrument(name = "Create Certificate", skip(pool, payload))]
+pub async fn post_handler(
+    pool: web::Data<sqlx::PgPool>,
+    payload: web::Json<CreateCertificateRequest>,
+) -> Result<impl Responder, actix_web::Error> {
+
+    let key_repo = KeyAlgorithmRepository::new(pool.get_ref().clone());
+    let create_certificate_request = payload.into_inner();
+    create_certificate_request.validate().map_err(|e| {
+        tracing::error!("Validation error: {:?}", e);
+        actix_web::error::ErrorBadRequest("Validation error")
+    })?;
+
+    // --- Lookup key algorithm ---
+    let key_algorithm = key_repo
+        .find_by_id(create_certificate_request.key_algorithm_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Database error fetching key algorithm: {:?}", e);
+            actix_web::error::ErrorInternalServerError("Database error")
+        })?
+        .ok_or_else(|| {
+            tracing::error!(
+                "Key algorithm not found for ID: {}",
+                create_certificate_request.key_algorithm_id
+            );
+            actix_web::error::ErrorNotFound("Key algorithm not found")
+        })?;
+
+    // --- Generate keypair ---
+    let (private_key_pem, public_key_pem) = key_algorithm
+        .generate_key_pair()
+        .map_err(|e| {
+            tracing::error!("Keypair generation failed: {:?}", e);
+            actix_web::error::ErrorInternalServerError("Keypair generation failed")
+        })?;
+
+    // --- Build CSR params (domain struct, not DTO) ---
+    let csr_params = CsrGenerationParams {
+        subject: CertificateSubjectFields {
+            organization: create_certificate_request.subject.organization.clone(),
+            organizational_unit: create_certificate_request.subject.organizational_unit.clone(),
+            country: create_certificate_request.subject.country.clone(),
+            state_or_province: create_certificate_request.subject.state_or_province.clone(),
+            locality: create_certificate_request.subject.locality.clone(),
+            email: create_certificate_request.subject.email.clone(),
+        },
+        sans: create_certificate_request.sans.clone(),
+    };
+
+    // --- Generate CSR ---
+    let csr_pem = key_algorithm
+        .generate_csr(&private_key_pem, &csr_params)
+        .map_err(|e| {
+            tracing::error!("CSR generation failed: {:?}", e);
+            actix_web::error::ErrorInternalServerError("CSR generation failed")
+        })?;
+
+    // --- Return response ---
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "csr_pem": csr_pem,
+        "public_key_pem": public_key_pem
+    })))
+}
+
+
+    // Store in database
+    //let repo = CertificateRepository::new(pool.get_ref().clone());
+
+    // let cert_id = match repo
+    //     .create(
+    //         &csr_pem,
+    //         &private_key_pem,
+    //         &public_key_pem,
+    //         dto.key_algorithm,
+    //         dto.key_strength,
+    //         dto.subject.organization.as_deref(),
+    //         dto.subject.organizational_unit.as_deref(),
+    //         dto.subject.country.as_deref(),
+    //         dto.subject.state_or_province.as_deref(),
+    //         dto.subject.locality.as_deref(),
+    //         dto.subject.email.as_deref(),
+    //         &dto.sans,
+    //     )
+    //     .await
+    // {
+    //     Ok(id) => id,
     //     Err(e) => {
-    //         tracing::error!("Failed to retrieve legacy_certificates: {}", e);
+    //         tracing::error!("Failed to store certificate in database: {}", e);
+    //         return HttpResponse::InternalServerError().json(serde_json::json!({
+    //             "error": "Failed to store certificate",
+    //             "message": e.to_string()
+    //         }));
+    //     }
+    // };
+    //
+    // // Retrieve the created certificate
+    // match repo.find_by_id(cert_id).await {
+    //     Ok(Some(cert)) => match CertificateResponseDto::try_from(cert) {
+    //         Ok(response_dto) => HttpResponse::Created().json(response_dto),
+    //         Err(e) => {
+    //             tracing::error!("Failed to convert certificate: {}", e);
+    //             HttpResponse::UnprocessableEntity().json(serde_json::json!({
+    //                 "error": "Invalid certificate format",
+    //                 "message": e.to_string()
+    //             }))
+    //         }
+    //     },
+    //     Ok(None) => HttpResponse::InternalServerError().json(serde_json::json!({
+    //         "error": "Certificate created but not found"
+    //     })),
+    //     Err(e) => {
+    //         tracing::error!("Failed to retrieve created certificate: {}", e);
     //         HttpResponse::InternalServerError().json(serde_json::json!({
-    //             "error": "Failed to retrieve legacy_certificates",
+    //             "error": "Failed to retrieve certificate",
     //             "message": e.to_string()
     //         }))
     //     }
     // }
-}
 
-/*#[tracing::instrument(name = "Create Certificate", skip(pool, payload))]
-pub async fn post_handler(
-    pool: web::Data<sqlx::PgPool>,
-    payload: web::Json<CreateCertificateRequest>,
-) -> impl Responder {
-    let create_certificate_request   = payload.into_inner();
-    
-    // Convert DTO to internal request model
-    let request = CertificateGenerationRequest {
-        key_algorithm: dto.key_algorithm,
-        key_strength: dto.key_strength,
-        subject: dto.subject.clone(),
-        sans: dto.sans.clone(),
-        validity_days: dto.validity_days,
-    };
-
-    // Generate key and CSR
-    let (private_key_pem, csr_pem, public_key_pem) = match request.generate_key_and_csr() {
-        Ok(keys) => keys,
-        Err(e) => {
-            tracing::error!("Failed to generate key and CSR: {}", e);
-            return HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to generate key and CSR",
-                "message": e.to_string()
-            }));
-        }
-    };
-
-    // Store in database
-    let repo = CertificateRepository::new(pool.get_ref().clone());
-
-    let cert_id = match repo
-        .create(
-            &csr_pem,
-            &private_key_pem,
-            &public_key_pem,
-            dto.key_algorithm,
-            dto.key_strength,
-            dto.subject.organization.as_deref(),
-            dto.subject.organizational_unit.as_deref(),
-            dto.subject.country.as_deref(),
-            dto.subject.state_or_province.as_deref(),
-            dto.subject.locality.as_deref(),
-            dto.subject.email.as_deref(),
-            &dto.sans,
-        )
-        .await
-    {
-        Ok(id) => id,
-        Err(e) => {
-            tracing::error!("Failed to store certificate in database: {}", e);
-            return HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to store certificate",
-                "message": e.to_string()
-            }));
-        }
-    };
-
-    // Retrieve the created certificate
-    match repo.find_by_id(cert_id).await {
-        Ok(Some(cert)) => match CertificateResponseDto::try_from(cert) {
-            Ok(response_dto) => HttpResponse::Created().json(response_dto),
-            Err(e) => {
-                tracing::error!("Failed to convert certificate: {}", e);
-                HttpResponse::UnprocessableEntity().json(serde_json::json!({
-                    "error": "Invalid certificate format",
-                    "message": e.to_string()
-                }))
-            }
-        },
-        Ok(None) => HttpResponse::InternalServerError().json(serde_json::json!({
-            "error": "Certificate created but not found"
-        })),
-        Err(e) => {
-            tracing::error!("Failed to retrieve created certificate: {}", e);
-            HttpResponse::InternalServerError().json(serde_json::json!({
-                "error": "Failed to retrieve certificate",
-                "message": e.to_string()
-            }))
-        }
-    }
-}*/
 
 #[tracing::instrument(name = "Get Certificate by ID", skip(pool))]
 pub async fn get_by_id_handler(

@@ -25,6 +25,27 @@ requests:
         name: Get All Certificates
         method: GET
         url: "{{ host }}/certificates"
+      create_rsa_2048_certificate:
+        name: Create RSA 2048 Certificate
+        method: POST
+        url: "{{ host }}/certificates"
+        headers:
+          Content-Type: application/json
+        body: | 
+          { 
+            "key_algorithm_id": "c62abdb7-4d7b-43da-9e95-5f1f8b814ad9", 
+            "subject": 
+              { 
+                "organization": "Example Corp", 
+                "organizational_unit": "IT", 
+                "country": "US", 
+                "state_or_province": "California", 
+                "locality": "San Francisco", 
+                "email": "admin@example.com" 
+            }, 
+            "sans": [ "example.com", "www.example.com" ], 
+            "validity_days": 365 
+          }
   keys_folder:
     name: Key Algorithm
     requests:
@@ -66,7 +87,7 @@ requests:
         body:
           type: json
           data:
-            { "rsa_key_size": 64}
+            { "rsa_key_size": 64 }
       update:
         name: Update Deprecate Key
         method: PATCH

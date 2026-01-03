@@ -1,5 +1,5 @@
 use crate::server::models::base::BaseModel;
-use crate::server::models::key_algorithms::KeyPair;
+use crate::server::models::key_algorithms::{GenerateCertificateSigningRequest, KeyPair};
 
 use chrono::{DateTime, Utc};
 use openssl::derive::Deriver;
@@ -12,6 +12,7 @@ use openssl::sign::{Signer, Verifier};
 use serde::Deserialize;
 use std::error::Error;
 use uuid::Uuid;
+use crate::server::models::certificates::db::CsrGenerationParams;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithm {
@@ -184,5 +185,68 @@ impl KeyPair for KeyAlgorithmInfo {
             }
             other => Err(format!("Unsupported algorithm type: {}", other).into()),
         }
+    }
+}
+
+impl GenerateCertificateSigningRequest for KeyAlgorithmInfo {
+    fn generate_csr(
+        &self,
+        private_key_pem: &str,
+        params: &CsrGenerationParams,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+
+        use openssl::x509::{X509ReqBuilder, X509NameBuilder};
+        use openssl::pkey::PKey;
+
+        let pkey = PKey::private_key_from_pem(private_key_pem.as_bytes())?;
+
+        let mut name = X509NameBuilder::new()?;
+
+        if let Some(ref org) = params.subject.organization {
+            name.append_entry_by_text("O", org)?;
+        }
+        if let Some(ref ou) = params.subject.organizational_unit {
+            name.append_entry_by_text("OU", ou)?;
+        }
+        if let Some(ref c) = params.subject.country {
+            name.append_entry_by_text("C", c)?;
+        }
+        if let Some(ref st) = params.subject.state_or_province {
+            name.append_entry_by_text("ST", st)?;
+        }
+        if let Some(ref l) = params.subject.locality {
+            name.append_entry_by_text("L", l)?;
+        }
+        if let Some(ref email) = params.subject.email {
+            name.append_entry_by_text("emailAddress", email)?;
+        }
+
+        let name = name.build();
+
+        let mut builder = X509ReqBuilder::new()?;
+        builder.set_subject_name(&name)?;
+        builder.set_pubkey(&pkey)?;
+
+        if !params.sans.is_empty() {
+            use openssl::x509::extension::SubjectAlternativeName;
+            use openssl::stack::Stack;
+
+            let mut san = SubjectAlternativeName::new();
+            for entry in &params.sans {
+                san.dns(entry);
+            }
+
+            let san_ext = san.build(&builder.x509v3_context(None))?;
+            let mut stack = Stack::new()?;
+            stack.push(san_ext)?;
+            builder.add_extensions(&stack)?;
+        }
+
+        builder.sign(&pkey, openssl::hash::MessageDigest::sha256())?;
+
+        let csr = builder.build();
+        let pem = csr.to_pem()?;
+
+        Ok(String::from_utf8(pem)?)
     }
 }
