@@ -8,8 +8,8 @@ use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
 use crate::server::models::key_algorithms::{GenerateCertificateSigningRequest, KeyPair};
 use crate::server::models::responses::RepositoryError;
 use crate::server::routes::responses::{to_response, to_response_list};
-use actix_web::{web, HttpResponse, Responder};
-use sha2::Digest;
+use actix_web::{web, Responder};
+
 use uuid::Uuid;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]

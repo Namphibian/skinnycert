@@ -1,6 +1,6 @@
 use crate::server::models::key_algorithms::KeyPair;
 use crate::server::models::responses::{PatchResult, RepositoryError};
-use actix_web::{HttpResponse, Responder, ResponseError};
+use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
