@@ -1,15 +1,15 @@
 ---
 execution:
   - scenario: rsa_scenario
-    concurrency: 6
-    ramp-up: 10s
-    hold-for: 1m
+    concurrency: 3
+    ramp-up: 30s
+    hold-for: 5m
     executor: gatling
 
   - scenario: ecdsa_scenario
-    concurrency: 6
-    ramp-up: 10s
-    hold-for: 1m
+    concurrency: 3
+    ramp-up: 30s
+    hold-for: 5m
     executor: gatling
 
 settings:

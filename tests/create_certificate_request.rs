@@ -1,6 +1,6 @@
 use uuid::Uuid;
-use skinnycert::server::models::legacy_certificates::certificates_model::CertificateSubject;
-use skinnycert::server::routes::certificates::dto::CreateCertificateRequest;
+
+use skinnycert::server::routes::certificates::dto::{CertificateSubject, CreateCertificateRequest};
 use skinnycert::server::routes::conversions::ConversionError;
 
 

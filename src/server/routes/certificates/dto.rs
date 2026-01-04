@@ -1,8 +1,3 @@
-use crate::server::models::legacy_certificates::certificates_model::{
-    CertificateSubject, KeyAlgorithm, KeyStrength,
-};
-use crate::server::models::legacy_certificates::db::DbCertificateWithSans;
-
 use crate::server::models::certificates::db::CertificateInfo;
 use crate::server::routes::conversions::{
     is_valid_dns_name, is_valid_ip, validate_optional_str, ConversionError,
@@ -13,6 +8,8 @@ use crate::server::routes::keys::dto::{KeyAlgorithmResponse, KeyAlgorithmStatusR
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -136,26 +133,17 @@ impl TryFrom<CertificateInfo> for CertificateInfoResponse {
     }
 }
 
-/// DTO for certificate response (sent to clients)
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CertificateResponseDto {
-    pub id: Uuid,
-    pub csr_pem: String,
-    pub cert_pem: Option<String>,
-    pub chain_pem: Option<String>,
-    pub key_algorithm: KeyAlgorithm,
-    pub key_strength: KeyStrength,
-    pub subject: CertificateSubject,
-    pub common_name: String,
-    pub sans: Vec<String>,
-    pub fingerprint: Option<String>,
-    pub valid_from: Option<DateTime<Utc>>,
-    pub valid_to: Option<DateTime<Utc>>,
-    pub created_on: DateTime<Utc>,
-    pub cert_uploaded_at: Option<DateTime<Utc>>,
-}
 
 /// DTO for creating a new certificate
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CertificateSubject {
+    pub organization: Option<String>,
+    pub organizational_unit: Option<String>,
+    pub country: Option<String>,
+    pub state_or_province: Option<String>,
+    pub locality: Option<String>,
+    pub email: Option<String>,
+}
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateCertificateRequest {
     pub key_algorithm_id: Uuid,
@@ -241,48 +229,4 @@ pub struct PatchCertificateDto {
     pub chain_pem: Option<String>,
 }
 
-/// Convert DbCertificateWithSans to CertificateResponseDto
-impl TryFrom<DbCertificateWithSans> for CertificateResponseDto {
-    type Error = Box<dyn std::error::Error + Send + Sync>;
 
-    fn try_from(db_cert: DbCertificateWithSans) -> Result<Self, Self::Error> {
-        let key_strength = match db_cert.key_algorithm {
-            KeyAlgorithm::RSA => {
-                let size = db_cert
-                    .rsa_key_size
-                    .ok_or("Missing RSA key size for RSA algorithm")?;
-                KeyStrength::Rsa(size)
-            }
-            KeyAlgorithm::ECDSA => {
-                let curve = db_cert
-                    .ecdsa_curve
-                    .ok_or("Missing ECDSA curve for ECDSA algorithm")?;
-                KeyStrength::Ecdsa(curve)
-            }
-        };
-
-        Ok(Self {
-            id: db_cert.id,
-            csr_pem: db_cert.csr_pem,
-            cert_pem: db_cert.cert_pem,
-            chain_pem: db_cert.chain_pem,
-            key_algorithm: db_cert.key_algorithm,
-            key_strength,
-            subject: CertificateSubject {
-                organization: db_cert.organization,
-                organizational_unit: db_cert.organizational_unit,
-                country: db_cert.country,
-                state_or_province: db_cert.state_or_province,
-                locality: db_cert.locality,
-                email: db_cert.email,
-            },
-            sans: db_cert.sans,
-            common_name: db_cert.common_name.unwrap_or_default(),
-            fingerprint: db_cert.fingerprint,
-            valid_from: db_cert.valid_from,
-            valid_to: db_cert.expires_at,
-            created_on: db_cert.created_at,
-            cert_uploaded_at: db_cert.cert_uploaded_at,
-        })
-    }
-}

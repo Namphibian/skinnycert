@@ -12,11 +12,11 @@ use openssl::sign::{Signer, Verifier};
 use openssl::stack::Stack;
 use openssl::x509::extension::SubjectAlternativeName;
 use openssl::x509::{X509NameBuilder, X509ReqBuilder};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
 use uuid::Uuid;
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Serialize, Deserialize,Debug, sqlx::FromRow)]
 pub struct KeyAlgorithm {
     #[sqlx(flatten)]
     pub base: BaseModel,
