@@ -21,10 +21,14 @@ requests:
   certificates_folder:
     name: Certificates
     requests:
-      list_all_certificates:
+      list_all_certificates_with_filters:
         name: Get All Certificates
         method: GET
         url: "{{ host }}/certificates"
+      list_all_rsa_certificates:
+        name: Get All RSA Certificates
+        method: GET
+        url: "{{ host }}/certificates?algorithm_type_name=rsa"
       create_rsa_2048_certificate:
         name: Create RSA 2048 Certificate
         method: POST

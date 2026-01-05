@@ -61,6 +61,8 @@ impl CertificateRepository {
             AND ($19 IS NULL OR valid_to >= $19)
             AND ($20 IS NULL OR valid_to <= $20)
         ORDER BY created_on DESC
+        LIMIT COALESCE($21, 100)
+        OFFSET COALESCE($22, 0)
         "#,
         )
         .bind(&params.common_name)
@@ -83,6 +85,8 @@ impl CertificateRepository {
         .bind(params.created_before)
         .bind(params.valid_to_after)
         .bind(params.valid_to_before)
+        .bind(params.limit)
+        .bind(params.offset)
         .fetch_all(&self.pool)
         .await
         .map_err(map_sqlx_error)?;

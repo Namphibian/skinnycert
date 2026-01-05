@@ -245,4 +245,7 @@ pub struct CertificateFilterParams {
 
     // Identifiers
     pub fingerprint: Option<String>,
+
+    pub limit: Option<i64>, // default 100
+    pub offset: Option<i64>, // default 0
 }
