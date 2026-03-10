@@ -4,7 +4,6 @@ use crate::server::models::responses::{map_sqlx_error, RepositoryError};
 use crate::server::models::shared::{decode_cursor, encode_cursor, PageDirection, PagedResult};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
-use urlencoding::decode as url_decode;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -75,7 +74,7 @@ impl CertificateRepository {
 
         let direction = params.direction.unwrap_or(PageDirection::Next);
 
-        let mut results = match direction {
+        let results = match direction {
             PageDirection::Next => {
                 // Fetch newest-first (DESC). Request limit+1 to detect if there are more items.
                 let mut rows = sqlx::query_as::<_, CertificateInfo>(

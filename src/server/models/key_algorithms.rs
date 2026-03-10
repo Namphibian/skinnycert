@@ -1,4 +1,3 @@
-use std::error::Error;
 
 pub mod db;
 pub mod repository;

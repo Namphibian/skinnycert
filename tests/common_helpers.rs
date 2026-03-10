@@ -39,7 +39,7 @@ pub async fn create_certificate_via_api(
     key_algorithm_id: &str,
 ) -> Value {
     let payload = serde_json::json!({
-        "key_algorithm_id": "9e472e3b-8c77-4e87-adaf-9cca0738de64",
+        "key_algorithm_id": key_algorithm_id,
         "subject":
           {
             "organization": "Integrated Skinny Cert Test",
