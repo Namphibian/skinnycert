@@ -1,5 +1,5 @@
 use crate::server::models::base::BaseModel;
-use crate::server::models::certificates::db::CsrGenerationParams;
+use crate::server::models::certificates::db::{CsrGenerationParams};
 use crate::server::models::key_algorithms::{GenerateCertificateSigningRequest, KeyPair};
 use chrono::{DateTime, Utc};
 use openssl::derive::Deriver;
@@ -28,13 +28,7 @@ pub struct KeyAlgorithm {
     pub deprecated: bool,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct KeyAlgorithmFilterParams {
-    pub algorithm_type: Option<String>,
-    pub tls_status: Option<String>,
-    pub algorithm_status: Option<String>,
-    pub strength: Option<i32>,
-}
+
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithmInfo {

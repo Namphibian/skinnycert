@@ -4,6 +4,7 @@ use crate::server::models::certificates::db::CsrGenerationParams;
 pub mod db;
 pub mod repository;
 pub mod seed;
+pub mod filters;
 
 pub trait KeyPair {
     fn generate_key_pair(&self) -> Result<(String, String), Box<dyn std::error::Error>>;

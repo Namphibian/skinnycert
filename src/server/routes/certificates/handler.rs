@@ -1,16 +1,16 @@
 use super::dto::{CertificateInfoResponse, CreateCertificateRequest};
 use crate::server;
 use crate::server::models::certificates::db::{
-    CertificateFilterParams, CertificateInfo, CertificateSubjectFields, CsrGenerationParams,
+    CertificateInfo, CertificateSubjectFields, CsrGenerationParams,
 };
 use crate::server::models::certificates::repository::CertificateRepository;
 use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
 use crate::server::models::key_algorithms::{GenerateCertificateSigningRequest, KeyPair};
 use crate::server::models::responses::RepositoryError;
-use crate::server::routes::responses::{to_response, to_response_list};
+use crate::server::routes::responses::{to_response, to_response_paged};
 use actix_web::{web, Responder};
 
-use crate::server::models::base::PagedResult;
+use crate::server::models::certificates::filters::CertificateFilterParams;
 use uuid::Uuid;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
@@ -20,45 +20,9 @@ pub async fn get_handler(
 ) -> impl Responder {
     let repo = CertificateRepository::new(pool.get_ref().clone());
     let filter = query.into_inner();
-
-    match repo.find_all_paged(&filter).await {
-        Ok(paged) => {
-            // Convert Vec<CertificateInfo> → Vec<CertificateInfoResponse>
-            let converted: Result<Vec<CertificateInfoResponse>, _> = paged
-                .items
-                .into_iter()
-                .map(CertificateInfoResponse::try_from)
-                .collect();
-
-            match converted {
-                Ok(items) => {
-                    // Wrap into PagedResult<CertificateInfoResponse>
-                    let response = PagedResult {
-                        items,
-                        next_page_token: paged.next_page_token,
-                        prev_page_token: paged.prev_page_token,
-                        limit: paged.limit,
-                    };
-
-                    actix_web::HttpResponse::Ok().json(response)
-                }
-                Err(e) => {
-                    tracing::error!("DTO conversion failed: {:?}", e);
-                    actix_web::HttpResponse::InternalServerError()
-                        .json(serde_json::json!({ "error": "DTO conversion failed" }))
-                }
-            }
-        }
-        Err(e) => match e {
-            RepositoryError::InvalidToken => actix_web::HttpResponse::BadRequest()
-                .json(serde_json::json!({ "error": "Invalid page token" })),
-            _ => {
-                tracing::error!("Database error: {:?}", e);
-                actix_web::HttpResponse::InternalServerError()
-                    .json(serde_json::json!({ "error": "Database error" }))
-            }
-        },
-    }
+    to_response_paged::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
+        repo.find_all_paged(&filter).await,
+    )
 }
 
 #[tracing::instrument(name = "Create Certificate", skip(pool, payload))]

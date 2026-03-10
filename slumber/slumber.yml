@@ -28,7 +28,7 @@ requests:
       list_all_certificates_with_invalid_token:
         name: Get All Certificates Invalid Token
         method: GET
-        url: "{{ host }}/certificates?limit=10&direction=next&page_token=MjAyN"
+        url: "{{ host }}/certificates?limit=10&direction=next&pageToken=BAD_TOKEN"
       list_all_rsa_certificates:
         name: Get All RSA Certificates
         method: GET
@@ -64,11 +64,11 @@ requests:
       list_all_rsa_algo:
         name: List RSA Keys
         method: GET
-        url: "{{ host }}/keys?algorithm_type=RSA"
+        url: "{{ host }}/keys?algorithmType=RSA"
       list_all_ecdsa_algo:
         name: List All ECDSA Keys
         method: GET
-        url: "{{ host }}/keys?algorithm_type=ECDSA"
+        url: "{{ host }}/keys?algorithmType=ECDSA"
       get_key_by_id:
         name: Get By ID
         method: GET

@@ -5,6 +5,13 @@ use uuid::Uuid;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use crate::server::models::responses::RepositoryError;
 
+/// Paging direction for cursor-based pagination
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PageDirection {
+    Next,
+    Prev,
+}
 #[derive(Serialize, Deserialize, Debug, Clone, sqlx::FromRow)]
 pub struct BaseModel {
     pub id: Uuid,

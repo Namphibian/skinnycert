@@ -1,7 +1,8 @@
-use crate::server::models::key_algorithms::db::{KeyAlgorithmFilterParams, KeyAlgorithmInfo};
+use crate::server::models::key_algorithms::db::{ KeyAlgorithmInfo};
 use crate::server::models::responses::{map_sqlx_error, RepositoryError};
 use sqlx::PgPool;
 use uuid::Uuid;
+use crate::server::models::key_algorithms::filters::KeyAlgorithmFilterParams;
 
 #[derive(Debug)]
 pub struct KeyAlgorithmRepository {

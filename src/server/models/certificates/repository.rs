@@ -1,13 +1,14 @@
-use crate::server::models::base::{decode_cursor, encode_cursor, PagedResult};
+use crate::server::models::base::{decode_cursor, encode_cursor, PageDirection, PagedResult};
 use crate::server::models::certificates::db::{
-    CertificateFilterParams, CertificateInfo, CertificateSubjectFields, CsrGenerationParams,
-    PageDirection,
+    CertificateInfo, CertificateSubjectFields, CsrGenerationParams,
 };
+use crate::server::models::certificates::filters::CertificateFilterParams;
 use crate::server::models::responses::{map_sqlx_error, RepositoryError};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use urlencoding::decode as url_decode;
 use uuid::Uuid;
+
 #[derive(Debug)]
 pub struct CertificateRepository {
     pool: PgPool,

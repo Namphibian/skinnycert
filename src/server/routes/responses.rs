@@ -2,6 +2,7 @@ use crate::server::models::key_algorithms::KeyPair;
 use crate::server::models::responses::{PatchResult, RepositoryError};
 use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
+use crate::server::models::base::PagedResult;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,6 +65,53 @@ impl ResponseError for RepositoryError {
             },
         };
         HttpResponse::build(self.status_code()).json(body)
+    }
+}
+#[tracing::instrument(name = "To Response Paged", level = tracing::Level::DEBUG)]
+pub fn to_response_paged<M, D, E>(result: Result<PagedResult<M>, E>) -> HttpResponse
+where
+    D: TryFrom<M> + serde::Serialize,
+    D::Error: std::fmt::Display,
+    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug,
+    M: std::fmt::Debug,
+{
+    match result {
+        Ok(paged) => {
+            // Convert items
+            let dtos: Result<Vec<_>, _> = paged.items.into_iter().map(D::try_from).collect();
+            match dtos {
+                Ok(items) => {
+                    let response = PagedResult {
+                        items,
+                        next_page_token: paged.next_page_token,
+                        prev_page_token: paged.prev_page_token,
+                        limit: paged.limit,
+                    };
+                    HttpResponse::Ok().json(response)
+                }
+                Err(e) => {
+                    tracing::error!(
+                        error = %e,
+                        context = "to_response_paged",
+                        "DTO conversion failed for paged result"
+                    );
+                    HttpResponse::InternalServerError().json(serde_json::json!({
+                        "error": "Invalid format",
+                        "message": e.to_string()
+                    }))
+                }
+            }
+        }
+        Err(e) => {
+            let err: RepositoryError = e.into();
+            tracing::error!(
+                error = %err,
+                context = "to_response_paged",
+                "Repository error while fetching paged list"
+            );
+            // Use the ResponseError impl to produce consistent body + status
+            err.error_response()
+        }
     }
 }
 
