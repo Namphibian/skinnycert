@@ -2,8 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use crate::server::models::responses::RepositoryError;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 
 /// Paging direction for cursor-based pagination
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -35,7 +35,6 @@ pub struct PageRequest {
     pub page_token: Option<String>,
 }
 
-
 /// Use a separator that cannot appear in an RFC3339 timestamp.
 /// '|' is safe for this purpose.
 pub fn encode_cursor(created_on: DateTime<Utc>, id: Uuid) -> String {
@@ -64,4 +63,21 @@ pub fn decode_cursor(token: &str) -> Result<(DateTime<Utc>, Uuid), RepositoryErr
     let id = Uuid::parse_str(id_str).map_err(|_| RepositoryError::InvalidUuid)?;
 
     Ok((ts, id))
+}
+/// Subject fields used for CSR generation
+#[derive(Debug, Clone)]
+pub struct CertificateSubjectFields {
+    pub organization: Option<String>,
+    pub organizational_unit: Option<String>,
+    pub country: Option<String>,
+    pub state_or_province: Option<String>,
+    pub locality: Option<String>,
+    pub email: Option<String>,
+}
+
+/// CSR generation parameters
+#[derive(Debug, Clone)]
+pub struct CsrGenerationParams {
+    pub subject: CertificateSubjectFields,
+    pub sans: Vec<String>,
 }

@@ -1,8 +1,8 @@
-use crate::server::models::key_algorithms::KeyPair;
+use crate::server::models::key_algorithms::db::KeyPair;
 use crate::server::models::responses::{PatchResult, RepositoryError};
+use crate::server::models::shared::PagedResult;
 use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
-use crate::server::models::base::PagedResult;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

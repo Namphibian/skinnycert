@@ -1,7 +1,7 @@
 use actix_web::http::StatusCode;
 use actix_web::ResponseError;
 use serde::{Deserialize, Serialize};
-use skinnycert::server::models::key_algorithms::KeyPair;
+use skinnycert::server::models::key_algorithms::db::KeyPair;
 use skinnycert::server::models::responses::{PatchResult, RepositoryError};
 use skinnycert::server::routes::responses::{
     key_pair_response, to_patch_response, to_response, to_response_list, KeyPairResponse,

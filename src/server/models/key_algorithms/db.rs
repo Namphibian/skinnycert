@@ -1,6 +1,6 @@
-use crate::server::models::base::BaseModel;
-use crate::server::models::certificates::db::{CsrGenerationParams};
-use crate::server::models::key_algorithms::{GenerateCertificateSigningRequest, KeyPair};
+use crate::server::models::shared::BaseModel;
+use crate::server::models::shared::CsrGenerationParams;
+
 use chrono::{DateTime, Utc};
 use openssl::derive::Deriver;
 use openssl::ec::{EcGroup, EcKey};
@@ -15,8 +15,24 @@ use openssl::x509::{X509NameBuilder, X509ReqBuilder};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use uuid::Uuid;
+pub trait KeyPair {
+    fn generate_key_pair(&self) -> Result<(String, String), Box<dyn std::error::Error>>;
+    fn verify_key_pair(
+        &self,
+        private_key_pem: String,
+        public_key_pem: String,
+    ) -> Result<(), Box<dyn Error>>;
+}
 
-#[derive(Serialize, Deserialize,Debug, sqlx::FromRow)]
+pub trait GenerateCertificateSigningRequest {
+    fn generate_csr(
+        &self,
+        private_key_pem: &str,
+        public_key_pem: &str,
+        params: &CsrGenerationParams,
+    ) -> Result<String, Box<dyn std::error::Error>>;
+}
+#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
 pub struct KeyAlgorithm {
     #[sqlx(flatten)]
     pub base: BaseModel,
@@ -27,8 +43,6 @@ pub struct KeyAlgorithm {
     pub display_name: String,
     pub deprecated: bool,
 }
-
-
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithmInfo {
@@ -221,7 +235,6 @@ impl GenerateCertificateSigningRequest for KeyAlgorithmInfo {
         if let Some(ref email) = params.subject.email {
             name.append_entry_by_text("emailAddress", email)?;
         }
-
 
         let name = name.build();
         let mut builder = X509ReqBuilder::new()?;

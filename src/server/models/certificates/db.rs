@@ -2,7 +2,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use crate::server::models::base::PageDirection;
 
 /// Represents a fully expanded certificate record from the `certificate_info` view.
 #[derive(Debug, Serialize, Deserialize, FromRow)]
@@ -119,22 +118,6 @@ pub struct CertificateSan {
     pub created_on: DateTime<Utc>,
 }
 
-/// Subject fields used for CSR generation
-#[derive(Debug, Clone)]
-pub struct CertificateSubjectFields {
-    pub organization: Option<String>,
-    pub organizational_unit: Option<String>,
-    pub country: Option<String>,
-    pub state_or_province: Option<String>,
-    pub locality: Option<String>,
-    pub email: Option<String>,
-}
 
-/// CSR generation parameters
-#[derive(Debug, Clone)]
-pub struct CsrGenerationParams {
-    pub subject: CertificateSubjectFields,
-    pub sans: Vec<String>,
-}
 
 

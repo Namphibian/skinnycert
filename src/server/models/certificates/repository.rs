@@ -1,9 +1,7 @@
-use crate::server::models::base::{decode_cursor, encode_cursor, PageDirection, PagedResult};
-use crate::server::models::certificates::db::{
-    CertificateInfo, CertificateSubjectFields, CsrGenerationParams,
-};
+use crate::server::models::certificates::db::CertificateInfo;
 use crate::server::models::certificates::filters::CertificateFilterParams;
 use crate::server::models::responses::{map_sqlx_error, RepositoryError};
+use crate::server::models::shared::{decode_cursor, encode_cursor, PageDirection, PagedResult};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use urlencoding::decode as url_decode;

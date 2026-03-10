@@ -6,7 +6,7 @@ use tokio::time::{sleep, Duration};
 pub async fn fetch_first_key_algorithm_id(base_url: &str, client: &Client) -> Option<String> {
     // Adjust path if your key algorithms route differs
     let resp = client
-        .get(&format!("{}/keys?algorithm_type=RSA", base_url))
+        .get(&format!("{}/keys?algorithmType=RSA", base_url))
         .send()
         .await
         .ok()?;

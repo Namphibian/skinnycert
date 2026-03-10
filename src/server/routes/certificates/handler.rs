@@ -1,16 +1,16 @@
 use super::dto::{CertificateInfoResponse, CreateCertificateRequest};
 use crate::server;
-use crate::server::models::certificates::db::{
-    CertificateInfo, CertificateSubjectFields, CsrGenerationParams,
-};
+use crate::server::models::certificates::db::CertificateInfo;
 use crate::server::models::certificates::repository::CertificateRepository;
 use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
-use crate::server::models::key_algorithms::{GenerateCertificateSigningRequest, KeyPair};
+
 use crate::server::models::responses::RepositoryError;
 use crate::server::routes::responses::{to_response, to_response_paged};
 use actix_web::{web, Responder};
 
 use crate::server::models::certificates::filters::CertificateFilterParams;
+use crate::server::models::key_algorithms::db::{GenerateCertificateSigningRequest, KeyPair};
+use crate::server::models::shared::{CertificateSubjectFields, CsrGenerationParams};
 use uuid::Uuid;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]

@@ -1,4 +1,4 @@
-use crate::server::models::base::BaseModel;
+use crate::server::models::shared::BaseModel;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct KeyAlgorithmTypeTlsStatus {

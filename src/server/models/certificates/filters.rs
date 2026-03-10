@@ -1,6 +1,6 @@
+use crate::server::models::shared::PageDirection;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::server::models::base::PageDirection;
 
 /// Filter parameters for querying certificates (cursor‑paging enabled)
 #[derive(Debug, Default, Serialize, Deserialize)]

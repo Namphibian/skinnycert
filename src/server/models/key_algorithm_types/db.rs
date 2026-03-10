@@ -1,4 +1,4 @@
-use crate::server::models::base::BaseModel;
+use crate::server::models::shared::BaseModel;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
