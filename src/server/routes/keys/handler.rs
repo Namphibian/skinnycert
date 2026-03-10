@@ -1,11 +1,11 @@
-use crate::server::models::key_algorithms::db::{KeyAlgorithmInfo};
+use crate::server::models::key_algorithms::db::KeyAlgorithmInfo;
+use crate::server::models::key_algorithms::filters::KeyAlgorithmFilterParams;
 use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
 use crate::server::models::responses::RepositoryError;
 use crate::server::routes::extractors::PathUuid;
 use crate::server::routes::keys::dto::KeyAlgorithmResponse;
 use crate::server::routes::responses::{key_pair_response, to_response, to_response_list};
 use actix_web::{web, Responder};
-use crate::server::models::key_algorithms::filters::KeyAlgorithmFilterParams;
 
 #[tracing::instrument(name = "Get All Key Algorithms", skip(pool))]
 pub async fn get_handler(
