@@ -24,11 +24,15 @@ requests:
       list_all_certificates_with_filters:
         name: Get All Certificates
         method: GET
-        url: "{{ host }}/certificates"
+        url: "{{ host }}/certificates?limit=10&direction=next"
+      list_all_certificates_with_invalid_token:
+        name: Get All Certificates Invalid Token
+        method: GET
+        url: "{{ host }}/certificates?limit=10&direction=next&page_token=MjAyN"
       list_all_rsa_certificates:
         name: Get All RSA Certificates
         method: GET
-        url: "{{ host }}/certificates?algorithm_type_name=rsa"
+        url: "{{ host }}/certificates?algorithm_type_name=RSA"
       create_rsa_2048_certificate:
         name: Create RSA 2048 Certificate
         method: POST
@@ -60,11 +64,11 @@ requests:
       list_all_rsa_algo:
         name: List RSA Keys
         method: GET
-        url: "{{ host }}/keys?algorithm_type=rsa"
+        url: "{{ host }}/keys?algorithm_type=RSA"
       list_all_ecdsa_algo:
         name: List All ECDSA Keys
         method: GET
-        url: "{{ host }}/keys?algorithm_type=ecdsa"
+        url: "{{ host }}/keys?algorithm_type=ECDSA"
       get_key_by_id:
         name: Get By ID
         method: GET
@@ -74,7 +78,7 @@ requests:
         method: GET
         url: "{{ host }}/keys/c62abdb7-4d7b-43da-9e95-5f1f8b814ad9/keypair"
   rsa_keys_folder:
-    name: RSA Keys
+    name: RSA Keys LEGACY.
     requests:
       list_all_rsa:
         name: List All

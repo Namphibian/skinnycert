@@ -12,7 +12,7 @@ impl KeyAlgorithmRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-    #[tracing::instrument(name = "DB Read All Key Algorithms",level = tracing::Level::DEBUG)]
+
     #[tracing::instrument(name = "DB Read All Key Algorithms", level = tracing::Level::DEBUG)]
     pub async fn find_all(
         &self,

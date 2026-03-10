@@ -9,6 +9,27 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::server::models::base::PagedResult;
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CertificateListResponse {
+    pub items: Vec<CertificateInfoResponse>,
+    pub next_page_token: Option<String>,
+    pub prev_page_token: Option<String>,
+    pub limit: i64,
+}
+
+impl From<PagedResult<CertificateInfoResponse>> for CertificateListResponse {
+    fn from(p: PagedResult<CertificateInfoResponse>) -> Self {
+        Self {
+            items: p.items,
+            next_page_token: p.next_page_token,
+            prev_page_token: p.prev_page_token,
+            limit: p.limit,
+        }
+    }
+}
 
 
 #[derive(Debug, Serialize, Deserialize)]

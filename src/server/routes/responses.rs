@@ -40,6 +40,9 @@ impl ResponseError for RepositoryError {
             RepositoryError::Database { .. } | RepositoryError::Transaction { .. } => {
                 actix_web::http::StatusCode::INTERNAL_SERVER_ERROR
             }
+            RepositoryError::InvalidToken => actix_web::http::StatusCode::BAD_REQUEST,
+            RepositoryError::InvalidTimestamp => actix_web::http::StatusCode::BAD_REQUEST,
+            RepositoryError::InvalidUuid => actix_web::http::StatusCode::BAD_REQUEST
         }
     }
 

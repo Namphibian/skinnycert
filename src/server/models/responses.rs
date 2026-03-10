@@ -181,6 +181,15 @@ pub enum RepositoryError {
 
     #[error("Transaction error: {message}")]
     Transaction { message: String },
+
+    #[error("Invalid page token")]
+    InvalidToken,
+
+    #[error("Invalid timestamp in page token")]
+    InvalidTimestamp,
+
+    #[error("Invalid UUID in page token")]
+    InvalidUuid,
 }
 
 
