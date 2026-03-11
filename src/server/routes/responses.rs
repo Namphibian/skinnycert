@@ -3,6 +3,7 @@ use crate::server::models::responses::{PatchResult, RepositoryError};
 use crate::server::models::shared::PagedResult;
 use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -266,3 +267,18 @@ where
         }
     }
 }
+#[tracing::instrument(name = "To Delete Response ",level = tracing::Level::DEBUG)]
+pub fn to_delete_response<E>(result: Result<Option<Uuid>, E>) -> HttpResponse
+where
+    E: Into<RepositoryError> + std::fmt::Debug,
+{
+    match result {
+        Ok(Some(_)) => HttpResponse::NoContent().finish(),
+        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({ "error": "Not found" })),
+        Err(e) => {
+            let err: RepositoryError = e.into();
+            err.error_response()
+        }
+    }
+}
+

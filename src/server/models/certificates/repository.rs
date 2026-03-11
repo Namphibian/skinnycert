@@ -4,6 +4,7 @@ use crate::server::models::responses::{map_sqlx_error, RepositoryError};
 use crate::server::models::shared::{decode_cursor, encode_cursor, PageDirection, PagedResult};
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
+use urlencoding::decode as url_decode;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -31,14 +32,81 @@ impl CertificateRepository {
 
         Ok(result)
     }
+    pub async fn create(
+        &self,
+        csr_pem: &str,
+        key_pem: &str,
+        public_key_pem: &str,
+        key_algorithm_id: Uuid,
+        organization: Option<&str>,
+        organizational_unit: Option<&str>,
+        country: Option<&str>,
+        state_or_province: Option<&str>,
+        locality: Option<&str>,
+        email: Option<&str>,
+        sans: &[String],
+    ) -> Result<Uuid, RepositoryError> {
+        let mut tx = self.pool.begin().await.map_err(map_sqlx_error)?;
+
+        let cert_id: Uuid = sqlx::query_scalar(
+            r#"
+            INSERT INTO certificates (
+                csr_pem, key_pem, public_key_pem, key_algorithm_id,
+                organization, organizational_unit, country, state_or_province, locality, email
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id
+            "#,
+        )
+        .bind(csr_pem)
+        .bind(key_pem)
+        .bind(public_key_pem)
+        .bind(key_algorithm_id)
+        .bind(organization)
+        .bind(organizational_unit)
+        .bind(country)
+        .bind(state_or_province)
+        .bind(locality)
+        .bind(email)
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(map_sqlx_error)?;
+
+        for (index, san) in sans.iter().enumerate() {
+            sqlx::query(
+                r#"
+                INSERT INTO certificate_sans (certificate_id, san_value, san_order)
+                VALUES ($1, $2, $3)
+                "#,
+            )
+            .bind(cert_id)
+            .bind(san)
+            .bind(index as i32)
+            .execute(&mut *tx)
+            .await
+            .map_err(map_sqlx_error)?;
+        }
+
+        tx.commit().await.map_err(map_sqlx_error)?;
+        Ok(cert_id)
+    }
+    #[tracing::instrument(name = "DB Delete Certificate By ID", level = tracing::Level::DEBUG)]
+    pub async fn delete_by_id(&self, id: Uuid) -> Result<Option<Uuid>, RepositoryError> {
+        // If your DB supports RETURNING, fetch_optional returns Some(row) when deleted
+        let row = sqlx::query!("DELETE FROM certificates WHERE id = $1 RETURNING id", id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(map_sqlx_error)?;
+
+        Ok(row.map(|r| r.id))
+    }
+
 
     #[tracing::instrument(name = "DB Read All Certificates (Paged)", level = tracing::Level::INFO)]
     pub async fn find_all_paged(
         &self,
         params: &CertificateFilterParams,
     ) -> Result<PagedResult<CertificateInfo>, RepositoryError> {
-        use urlencoding::decode as url_decode;
-
         // requested limit (default 100)
         let limit = params.limit.unwrap_or(100);
 
@@ -256,64 +324,5 @@ impl CertificateRepository {
             prev_page_token,
             limit,
         })
-    }
-
-    pub async fn create(
-        &self,
-        csr_pem: &str,
-        key_pem: &str,
-        public_key_pem: &str,
-        key_algorithm_id: Uuid,
-        organization: Option<&str>,
-        organizational_unit: Option<&str>,
-        country: Option<&str>,
-        state_or_province: Option<&str>,
-        locality: Option<&str>,
-        email: Option<&str>,
-        sans: &[String],
-    ) -> Result<Uuid, RepositoryError> {
-        let mut tx = self.pool.begin().await.map_err(map_sqlx_error)?;
-
-        let cert_id: Uuid = sqlx::query_scalar(
-            r#"
-            INSERT INTO certificates (
-                csr_pem, key_pem, public_key_pem, key_algorithm_id,
-                organization, organizational_unit, country, state_or_province, locality, email
-            )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            RETURNING id
-            "#,
-        )
-        .bind(csr_pem)
-        .bind(key_pem)
-        .bind(public_key_pem)
-        .bind(key_algorithm_id)
-        .bind(organization)
-        .bind(organizational_unit)
-        .bind(country)
-        .bind(state_or_province)
-        .bind(locality)
-        .bind(email)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(map_sqlx_error)?;
-
-        for (index, san) in sans.iter().enumerate() {
-            sqlx::query(
-                r#"
-                INSERT INTO certificate_sans (certificate_id, san_value, san_order)
-                VALUES ($1, $2, $3)
-                "#,
-            )
-            .bind(cert_id)
-            .bind(san)
-            .bind(index as i32)
-            .execute(&mut *tx)
-            .await
-            .map_err(map_sqlx_error)?;
-        }
-
-        tx.commit().await.map_err(map_sqlx_error)?;
-        Ok(cert_id)
     }
 }

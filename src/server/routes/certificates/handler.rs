@@ -5,8 +5,8 @@ use crate::server::models::certificates::repository::CertificateRepository;
 use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
 
 use crate::server::models::responses::RepositoryError;
-use crate::server::routes::responses::{to_response, to_response_paged};
-use actix_web::{web, Responder};
+use crate::server::routes::responses::{to_delete_response, to_response, to_response_paged};
+use actix_web::{web, HttpResponse, Responder};
 
 use crate::server::models::certificates::filters::CertificateFilterParams;
 use crate::server::models::key_algorithms::db::{GenerateCertificateSigningRequest, KeyPair};
@@ -25,7 +25,7 @@ pub async fn get_handler(
     )
 }
 
-#[tracing::instrument(name = "Create Certificate", skip(pool, payload))]
+#[tracing::instrument(name = "Create Certificate Handler", skip(pool, payload))]
 pub async fn post_handler(
     pool: web::Data<sqlx::PgPool>,
     payload: web::Json<CreateCertificateRequest>,
@@ -119,67 +119,13 @@ pub async fn post_handler(
     }
 }
 
-// Store in database
-//let repo = CertificateRepository::new(pool.get_ref().clone());
-
-// let cert_id = match repo
-//     .create(
-//         &csr_pem,
-//         &private_key_pem,
-//         &public_key_pem,
-//         dto.key_algorithm,
-//         dto.key_strength,
-//         dto.subject.organization.as_deref(),
-//         dto.subject.organizational_unit.as_deref(),
-//         dto.subject.country.as_deref(),
-//         dto.subject.state_or_province.as_deref(),
-//         dto.subject.locality.as_deref(),
-//         dto.subject.email.as_deref(),
-//         &dto.sans,
-//     )
-//     .await
-// {
-//     Ok(id) => id,
-//     Err(e) => {
-//         tracing::error!("Failed to store certificate in database: {}", e);
-//         return HttpResponse::InternalServerError().json(serde_json::json!({
-//             "error": "Failed to store certificate",
-//             "message": e.to_string()
-//         }));
-//     }
-// };
-//
-// // Retrieve the created certificate
-// match repo.find_by_id(cert_id).await {
-//     Ok(Some(cert)) => match CertificateResponseDto::try_from(cert) {
-//         Ok(response_dto) => HttpResponse::Created().json(response_dto),
-//         Err(e) => {
-//             tracing::error!("Failed to convert certificate: {}", e);
-//             HttpResponse::UnprocessableEntity().json(serde_json::json!({
-//                 "error": "Invalid certificate format",
-//                 "message": e.to_string()
-//             }))
-//         }
-//     },
-//     Ok(None) => HttpResponse::InternalServerError().json(serde_json::json!({
-//         "error": "Certificate created but not found"
-//     })),
-//     Err(e) => {
-//         tracing::error!("Failed to retrieve created certificate: {}", e);
-//         HttpResponse::InternalServerError().json(serde_json::json!({
-//             "error": "Failed to retrieve certificate",
-//             "message": e.to_string()
-//         }))
-//     }
-// }
-
-#[tracing::instrument(name = "Get Certificate by ID", skip(pool))]
+#[tracing::instrument(name = "Get Certificate by ID Handler", skip(pool))]
 pub async fn get_by_id_handler(
     pool: web::Data<sqlx::PgPool>,
     path: web::Path<Uuid>,
 ) -> impl Responder {
     let cert_id = path.into_inner();
-    let repo = server::models::certificates::repository::CertificateRepository::new(
+    let repo = CertificateRepository::new(
         pool.get_ref().clone(),
     );
     to_response::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
@@ -187,12 +133,14 @@ pub async fn get_by_id_handler(
     )
 }
 
-/*pub async fn put_handler() -> impl Responder {
+#[tracing::instrument(name = "Put Certificate Handler")]
+pub async fn put_handler() -> impl Responder {
     HttpResponse::MethodNotAllowed().json(serde_json::json!({
         "error": "PUT not supported. Use PATCH to upload signed certificate."
     }))
 }
 
+/*
 #[tracing::instrument(name = "Patch Certificate", skip(pool, payload))]
 pub async fn patch_handler(
     pool: web::Data<sqlx::PgPool>,
@@ -304,24 +252,16 @@ pub async fn patch_handler(
         }
     }
 }
-
-#[tracing::instrument(name = "Delete Certificate", skip(pool))]
+*/
+#[tracing::instrument(name = "Delete Certificate Handler", skip(pool))]
 pub async fn delete_handler(
     pool: web::Data<sqlx::PgPool>,
     path: web::Path<Uuid>,
 ) -> impl Responder {
     let cert_id = path.into_inner();
     let repo = CertificateRepository::new(pool.get_ref().clone());
-
-    match repo.soft_delete(cert_id).await {
-        Ok(_) => HttpResponse::NoContent().finish(),
-        Err(e) => {
-            tracing::error!("Failed to delete certificate: {}", e);
-            HttpResponse::BadRequest().json(serde_json::json!({
-                "error": "Failed to delete certificate",
-                "message": e.to_string()
-            }))
-        }
-    }
+    to_delete_response::<RepositoryError>(
+        repo.delete_by_id(cert_id).await
+    )
 }
-*/
+

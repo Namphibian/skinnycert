@@ -21,6 +21,22 @@ requests:
   certificates_folder:
     name: Certificates
     requests:
+      fail_delete_certificate:
+        name: Fail DELETE Certificate
+        method: DELETE
+        url: "{{ host }}/certificates/161abdb1-1d1b-11da-1e11-1f1f1b111ad1"
+      delete_certificate:
+        name: DELETE Certificate
+        method: DELETE
+        url: "{{ host }}/certificates/c16393fd-2498-4f32-987f-a72b75cb2513"
+      fail_put_certificate:
+        name: Fail PUT Certificate
+        method: PUT
+        url: "{{ host }}/certificates/c62abdb7-4d7b-43da-9e95-5f1f8b814ad9"
+        body:
+          type: json
+          data:
+            { "subject": { "organization": "Example Corp" } }
       list_all_certificates_with_filters:
         name: Get All Certificates
         method: GET
