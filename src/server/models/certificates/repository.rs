@@ -101,7 +101,6 @@ impl CertificateRepository {
         Ok(row.map(|r| r.id))
     }
 
-
     #[tracing::instrument(name = "DB Read All Certificates (Paged)", level = tracing::Level::INFO)]
     pub async fn find_all_paged(
         &self,

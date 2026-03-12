@@ -19,19 +19,6 @@ use thiserror::Error;
 ///
 /// - `T`: The type of the updated item contained in the `Updated` variant.
 ///
-/// # Examples
-///
-/// ```
-/// use your_crate::PatchResult;
-///
-/// let result: PatchResult<String> = PatchResult::Updated(String::from("UpdatedValue"));
-///
-/// match result {
-///     PatchResult::Updated(value) => println!("Successfully updated: {}", value),
-///     PatchResult::NotFound => println!("Item not found."),
-///     PatchResult::NotModified => println!("No modification needed."),
-/// }
-/// ```
 #[derive(Debug)]
 pub enum PatchResult<T> {
     Updated(T),
@@ -111,25 +98,6 @@ pub enum PatchResult<T> {
 ///   - Errors specifically related to transactional failures.
 ///   - Fields:
 ///     - `message` - Additional details about the transaction error.
-///
-/// # Examples
-///
-/// ```rust
-/// use thiserror::Error;
-/// use crate::RepositoryError;
-///
-/// fn simulate_error() -> Result<(), RepositoryError> {
-///     Err(RepositoryError::UniqueViolation {
-///         constraint: "users_email_key".to_string(),
-///     })
-/// }
-///
-/// match simulate_error() {
-///     Ok(_) => println!("Operation succeeded"),
-///     Err(e) => println!("Error occurred: {}", e),
-/// }
-/// ```
-///
 /// This struct leverages the `thiserror` crate for deriving the `Error` implementation, making
 /// it compatible with standard Rust error handling schemes.
 #[derive(Debug, Error)]
@@ -192,8 +160,6 @@ pub enum RepositoryError {
     InvalidUuid,
 }
 
-
-
 /// Maps an `sqlx::Error` to a custom `RepositoryError`.
 ///
 /// This function is used to translate a generic database or SQL error encountered during
@@ -244,28 +210,6 @@ pub enum RepositoryError {
 ///
 /// For unknown PostgreSQL-specific errors, a generic `RepositoryError::Database` is returned with
 /// the error message.
-///
-/// # Examples
-///
-/// ```rust
-/// use sqlx::Error;
-/// use crate::{map_sqlx_error, RepositoryError};
-///
-/// fn process_error(e: sqlx::Error) -> RepositoryError {
-///     map_sqlx_error(e)
-/// }
-///
-/// let error = sqlx::Error::RowNotFound;
-/// let mapped_error = process_error(error);
-///
-/// match mapped_error {
-///     RepositoryError::Database { message } => {
-///         println!("Database error: {}", message);
-///     },
-///     _ => println!("Other error"),
-/// }
-/// ```
-///
 /// # Notes
 ///
 /// - The function is intended to simplify error handling and provide domain-specific error types

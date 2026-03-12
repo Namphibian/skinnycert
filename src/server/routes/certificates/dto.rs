@@ -31,7 +31,6 @@ impl From<PagedResult<CertificateInfoResponse>> for CertificateListResponse {
     }
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PemDataResponse {
@@ -154,7 +153,6 @@ impl TryFrom<CertificateInfo> for CertificateInfoResponse {
     }
 }
 
-
 /// DTO for creating a new certificate
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CertificateSubject {
@@ -249,5 +247,3 @@ pub struct PatchCertificateDto {
     pub cert_pem: String,
     pub chain_pem: Option<String>,
 }
-
-

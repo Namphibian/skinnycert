@@ -124,9 +124,7 @@ pub async fn get_by_id_handler(
     path: web::Path<Uuid>,
 ) -> impl Responder {
     let cert_id = path.into_inner();
-    let repo = CertificateRepository::new(
-        pool.get_ref().clone(),
-    );
+    let repo = CertificateRepository::new(pool.get_ref().clone());
     to_response::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
         repo.find_by_id(cert_id).await,
     )
@@ -259,8 +257,5 @@ pub async fn delete_handler(
 ) -> impl Responder {
     let cert_id = path.into_inner();
     let repo = CertificateRepository::new(pool.get_ref().clone());
-    to_delete_response::<RepositoryError>(
-        repo.delete_by_id(cert_id).await
-    )
+    to_delete_response::<RepositoryError>(repo.delete_by_id(cert_id).await)
 }
-
