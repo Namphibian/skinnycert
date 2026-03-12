@@ -719,7 +719,7 @@ SELECT c.id,
        (ARRAY_AGG(cs.san_value ORDER BY cs.san_order))[1] AS common_name
 FROM certificates c
          LEFT JOIN certificate_sans cs ON c.id = cs.certificate_id
-GROUP BY c.id
+GROUP BY c.id;
 
 DROP VIEW IF EXISTS certificate_info CASCADE;
 

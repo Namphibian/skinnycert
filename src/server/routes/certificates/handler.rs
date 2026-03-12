@@ -1,5 +1,4 @@
 use super::dto::{CertificateInfoResponse, CreateCertificateRequest};
-use crate::server;
 use crate::server::models::certificates::db::CertificateInfo;
 use crate::server::models::certificates::repository::CertificateRepository;
 use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
