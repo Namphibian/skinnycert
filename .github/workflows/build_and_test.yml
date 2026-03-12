@@ -17,13 +17,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Docker Compose plugin (and psql client)
+      - name: Install docker-compose and psql client
         run: |
-          sudo apt-get update
-          # Install docker-compose plugin (provides `docker compose`)
-          sudo apt-get install -y docker-compose-plugin
-          # Install psql client for schema verification
+          sudo apt-get update -y
           sudo apt-get install -y postgresql-client
+          # Install docker-compose v2 standalone binary
+          COMPOSE_VER="v2.20.2"
+          sudo curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VER}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+
 
       - name: Start postgres via docker compose
         run: |
