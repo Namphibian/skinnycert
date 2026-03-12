@@ -28,38 +28,30 @@ jobs:
 
       - name: Start postgres via docker-compose
         run: |
-          # Start only the postgres service defined in compose.yaml
+          # Ensure any previous stack and volumes are removed so init_db.sql runs fresh
+          docker-compose -f ./compose.yaml down -v || true
           docker-compose -f ./compose.yaml up -d postgres
-          # Show recent logs for debugging
           docker-compose -f ./compose.yaml logs --tail=100 postgres || true
-      - name: Wait for Postgres to be ready (inside container)
+
+      - name: Wait for Postgres to be ready on localhost
         env:
           PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
-          # show container status for debugging
-          docker-compose -f ./compose.yaml ps
-      
-          # tail logs in background for extra visibility
-          docker-compose -f ./compose.yaml logs --tail=200 postgres || true &
-      
-          # wait until pg_isready inside the container reports ready
           for i in $(seq 1 60); do
-            docker exec skinnycert-postgres pg_isready -U skinnycert_user -d skinnycert && break
-            echo "waiting for postgres inside container..."
+            pg_isready -h localhost -p 5432 -U skinnycert_user -d skinnycert && break
+            echo "waiting for postgres on localhost:5432..."
             sleep 1
           done
-
-          # final check: show last logs
+          # show a short status after waiting
+          docker-compose -f ./compose.yaml ps
           docker-compose -f ./compose.yaml logs --tail=200 postgres || true
 
-      - name: Verify schema applied (run inside container)
+      - name: Verify schema applied using host psql
         env:
           PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
-          # list tables from inside the container
-          docker exec -e PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} skinnycert-postgres \
-            psql -U skinnycert_user -d skinnycert -c '\dt'
-
+          # Confirm tables exist (init_db.sql should have run)
+          psql -h localhost -U skinnycert_user -d skinnycert -c '\dt'
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
