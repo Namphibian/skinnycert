@@ -73,7 +73,7 @@ pub fn validate_optional_str(
         }
 
         if v.len() > max_len {
-            return Err(ConversionError::OutOfRange(
+            return Err(ConversionError::InvalidValue(
                 field,
                 format!("Field exceeds maximum length of {}", max_len),
             ));
