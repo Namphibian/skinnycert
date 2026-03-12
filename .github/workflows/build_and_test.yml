@@ -32,24 +32,34 @@ jobs:
           docker-compose -f ./compose.yaml up -d postgres
           # Show recent logs for debugging
           docker-compose -f ./compose.yaml logs --tail=100 postgres || true
-
-      - name: Wait for Postgres to be ready
+      - name: Wait for Postgres to be ready (inside container)
         env:
           PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
+          # show container status for debugging
+          docker-compose -f ./compose.yaml ps
+      
+          # tail logs in background for extra visibility
+          docker-compose -f ./compose.yaml logs --tail=200 postgres || true &
+      
+          # wait until pg_isready inside the container reports ready
           for i in $(seq 1 60); do
-            # your compose sets container_name: skinnycert-postgres
             docker exec skinnycert-postgres pg_isready -U skinnycert_user -d skinnycert && break
-            echo "waiting for postgres..."
+            echo "waiting for postgres inside container..."
             sleep 1
           done
 
-      - name: Verify schema applied
+          # final check: show last logs
+          docker-compose -f ./compose.yaml logs --tail=200 postgres || true
+
+      - name: Verify schema applied (run inside container)
         env:
           PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
-          # Confirm tables exist (init_db.sql should have run)
-          psql -h localhost -U skinnycert_user -d skinnycert -c '\dt'
+          # list tables from inside the container
+          docker exec -e PGPASSWORD=${{ secrets.POSTGRES_PASSWORD }} skinnycert-postgres \
+            psql -U skinnycert_user -d skinnycert -c '\dt'
+
 
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
