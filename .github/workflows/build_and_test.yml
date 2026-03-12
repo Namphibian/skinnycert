@@ -17,31 +17,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install docker-compose and psql client
+      - name: Install docker-compose standalone and psql client
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y postgresql-client
-          # Install docker-compose v2 standalone binary
+          sudo apt-get install -y curl ca-certificates postgresql-client
           COMPOSE_VER="v2.20.2"
           sudo curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VER}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
           docker-compose --version
 
-
-      - name: Start postgres via docker compose
+      - name: Start postgres via docker-compose
         run: |
-          # Use the compose file at repo root (compose.yaml)
-          # Start only the postgres service in detached mode
-          docker compose -f ./compose.yaml up -d postgres
+          # Start only the postgres service defined in compose.yaml
+          docker-compose -f ./compose.yaml up -d postgres
           # Show recent logs for debugging
-          docker compose -f ./compose.yaml logs --tail=100 postgres || true
+          docker-compose -f ./compose.yaml logs --tail=100 postgres || true
 
       - name: Wait for Postgres to be ready
         env:
           PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
         run: |
           for i in $(seq 1 60); do
-            # container_name in your compose is skinnycert-postgres
+            # your compose sets container_name: skinnycert-postgres
             docker exec skinnycert-postgres pg_isready -U skinnycert_user -d skinnycert && break
             echo "waiting for postgres..."
             sleep 1
@@ -65,6 +62,6 @@ jobs:
           DATABASE_URL: ${{ env.DATABASE_URL }}
         run: cargo test --verbose
 
-      - name: Tear down docker compose
+      - name: Tear down docker-compose
         if: always()
-        run: docker compose -f ./compose.yaml down -v
+        run: docker-compose -f ./compose.yaml down -v
