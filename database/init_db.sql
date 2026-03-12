@@ -548,144 +548,11 @@ CREATE TRIGGER cert_update_timestamp
     FOR EACH ROW
 EXECUTE FUNCTION update_cert_timestamp();
 
-
-
-DROP VIEW IF EXISTS certificate_info CASCADE;
-
-CREATE OR REPLACE VIEW certificate_info AS
-SELECT
-    -- Certificate core fields
-    c.id,
-    c.csr_pem,
-    c.cert_pem,
-    c.key_pem,
-    c.public_key_pem,
-    c.chain_pem,
-    c.key_algorithm_id,
-
-    -- Expanded algorithm metadata from key_algorithm_info
-    all_key.key_algorithm_display_name                AS key_algorithm_display_name,
-    all_key.key_algorithm_strength                    AS key_algorithm_key_strength,
-    all_key.key_algorithm_nid_value                   AS key_algorithm_nid_value,
-    all_key.key_algorithm_created_on,
-    all_key.key_algorithm_updated_on,
-
-    -- Algorithm status
-    all_key.status_id,
-    all_key.status_name,
-    all_key.status_description,
-    all_key.status_created_on,
-    all_key.status_updated_on,
-
-    -- Algorithm type
-    all_key.algorithm_type_id,
-    all_key.algorithm_type_name,
-    all_key.algorithm_type_description,
-    all_key.algorithm_type_requires_nid,
-    all_key.algorithm_type_requires_strength,
-    all_key.algorithm_type_created_on,
-    all_key.algorithm_type_updated_on,
-
-    -- TLS status
-    all_key.tls_status_id,
-    all_key.tls_status_name,
-    all_key.tls_status_description,
-    all_key.tls_status_created_on,
-    all_key.tls_status_updated_on,
-    -- Subject details
-    c.organization,
-    c.organizational_unit,
-    c.country,
-    c.state_or_province,
-    c.locality,
-    c.email,
-
-    -- SANs (ordered array)
-    COALESCE(
-                    ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
-                    FILTER (WHERE cs.san_value IS NOT NULL),
-                    ARRAY []::VARCHAR[]
-    )                                                 AS sans,
-
-    -- Common Name = first SAN (san_order = 0)
-    MIN(cs.san_value) FILTER (WHERE cs.san_order = 0) AS common_name,
-
-    -- Certificate metadata
-    c.fingerprint,
-    c.valid_from,
-    c.valid_to,
-
-    -- Derived metadata
-    COALESCE((c.cert_pem IS NOT NULL), FALSE)         AS is_signed,
-    COALESCE((NOW() > c.valid_to), FALSE)             AS is_expired,
-
-    -- Audit timestamps
-    c.created_on,
-    c.updated_on,
-    c.cert_uploaded_on,
-    c.deleted_on
-
-FROM certificates c
-         JOIN key_algorithm_info all_key
-              ON c.key_algorithm_id = all_key.key_algorithm_id
-         LEFT JOIN certificate_sans cs
-                   ON c.id = cs.certificate_id
-
-GROUP BY c.id,
-         c.csr_pem,
-         c.cert_pem,
-         c.key_pem,
-         c.public_key_pem,
-         c.chain_pem,
-         c.key_algorithm_id,
-
-         -- All fields from key_algorithm_info
-         all_key.key_algorithm_display_name,
-         all_key.key_algorithm_strength,
-         all_key.key_algorithm_nid_value,
-         all_key.key_algorithm_created_on,
-         all_key.key_algorithm_updated_on,
-         all_key.status_id,
-         all_key.status_name,
-         all_key.status_description,
-         all_key.status_created_on,
-         all_key.status_updated_on,
-         all_key.algorithm_type_id,
-         all_key.algorithm_type_name,
-         all_key.algorithm_type_description,
-         all_key.algorithm_type_requires_nid,
-         all_key.algorithm_type_requires_strength,
-         all_key.algorithm_type_created_on,
-         all_key.algorithm_type_updated_on,
-         all_key.tls_status_id,
-         all_key.tls_status_name,
-         all_key.tls_status_description,
-         all_key.tls_status_created_on,
-         all_key.tls_status_updated_on,
-         all_key.tls_status_updated_on,
-         -- Certificate subject + metadata
-         c.organization,
-         c.organizational_unit,
-         c.country,
-         c.state_or_province,
-         c.locality,
-         c.email,
-         c.fingerprint,
-         c.valid_from,
-         c.valid_to,
-         c.created_on,
-         c.updated_on,
-         c.cert_uploaded_on,
-         c.deleted_on;
-
-
-
 -- ============================================================
 -- Useful indexes
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_certificates_algorithm_id ON certificates (key_algorithm_id);
 CREATE INDEX IF NOT EXISTS idx_certificates_fingerprint ON certificates (fingerprint);
-
 
 -- Subject Alternative Names (many-to-many relationship)
 DROP TABLE IF EXISTS certificate_sans CASCADE;
@@ -854,5 +721,131 @@ FROM certificates c
          LEFT JOIN certificate_sans cs ON c.id = cs.certificate_id
 GROUP BY c.id
 
+DROP VIEW IF EXISTS certificate_info CASCADE;
 
+CREATE OR REPLACE VIEW certificate_info AS
+SELECT
+    -- Certificate core fields
+    c.id,
+    c.csr_pem,
+    c.cert_pem,
+    c.key_pem,
+    c.public_key_pem,
+    c.chain_pem,
+    c.key_algorithm_id,
+
+    -- Expanded algorithm metadata from key_algorithm_info
+    all_key.key_algorithm_display_name                AS key_algorithm_display_name,
+    all_key.key_algorithm_strength                    AS key_algorithm_key_strength,
+    all_key.key_algorithm_nid_value                   AS key_algorithm_nid_value,
+    all_key.key_algorithm_created_on,
+    all_key.key_algorithm_updated_on,
+
+    -- Algorithm status
+    all_key.status_id,
+    all_key.status_name,
+    all_key.status_description,
+    all_key.status_created_on,
+    all_key.status_updated_on,
+
+    -- Algorithm type
+    all_key.algorithm_type_id,
+    all_key.algorithm_type_name,
+    all_key.algorithm_type_description,
+    all_key.algorithm_type_requires_nid,
+    all_key.algorithm_type_requires_strength,
+    all_key.algorithm_type_created_on,
+    all_key.algorithm_type_updated_on,
+
+    -- TLS status
+    all_key.tls_status_id,
+    all_key.tls_status_name,
+    all_key.tls_status_description,
+    all_key.tls_status_created_on,
+    all_key.tls_status_updated_on,
+    -- Subject details
+    c.organization,
+    c.organizational_unit,
+    c.country,
+    c.state_or_province,
+    c.locality,
+    c.email,
+
+    -- SANs (ordered array)
+    COALESCE(
+                    ARRAY_AGG(cs.san_value ORDER BY cs.san_order)
+                    FILTER (WHERE cs.san_value IS NOT NULL),
+                    ARRAY []::VARCHAR[]
+    )                                                 AS sans,
+
+    -- Common Name = first SAN (san_order = 0)
+    MIN(cs.san_value) FILTER (WHERE cs.san_order = 0) AS common_name,
+
+    -- Certificate metadata
+    c.fingerprint,
+    c.valid_from,
+    c.valid_to,
+
+    -- Derived metadata
+    COALESCE((c.cert_pem IS NOT NULL), FALSE)         AS is_signed,
+    COALESCE((NOW() > c.valid_to), FALSE)             AS is_expired,
+
+    -- Audit timestamps
+    c.created_on,
+    c.updated_on,
+    c.cert_uploaded_on,
+    c.deleted_on
+
+FROM certificates c
+         JOIN key_algorithm_info all_key
+              ON c.key_algorithm_id = all_key.key_algorithm_id
+         LEFT JOIN certificate_sans cs
+                   ON c.id = cs.certificate_id
+
+GROUP BY c.id,
+         c.csr_pem,
+         c.cert_pem,
+         c.key_pem,
+         c.public_key_pem,
+         c.chain_pem,
+         c.key_algorithm_id,
+
+         -- All fields from key_algorithm_info
+         all_key.key_algorithm_display_name,
+         all_key.key_algorithm_strength,
+         all_key.key_algorithm_nid_value,
+         all_key.key_algorithm_created_on,
+         all_key.key_algorithm_updated_on,
+         all_key.status_id,
+         all_key.status_name,
+         all_key.status_description,
+         all_key.status_created_on,
+         all_key.status_updated_on,
+         all_key.algorithm_type_id,
+         all_key.algorithm_type_name,
+         all_key.algorithm_type_description,
+         all_key.algorithm_type_requires_nid,
+         all_key.algorithm_type_requires_strength,
+         all_key.algorithm_type_created_on,
+         all_key.algorithm_type_updated_on,
+         all_key.tls_status_id,
+         all_key.tls_status_name,
+         all_key.tls_status_description,
+         all_key.tls_status_created_on,
+         all_key.tls_status_updated_on,
+         all_key.tls_status_updated_on,
+         -- Certificate subject + metadata
+         c.organization,
+         c.organizational_unit,
+         c.country,
+         c.state_or_province,
+         c.locality,
+         c.email,
+         c.fingerprint,
+         c.valid_from,
+         c.valid_to,
+         c.created_on,
+         c.updated_on,
+         c.cert_uploaded_on,
+         c.deleted_on;
 
