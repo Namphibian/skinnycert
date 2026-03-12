@@ -569,7 +569,6 @@ CREATE TABLE certificate_sans
 CREATE INDEX idx_certificate_sans_value ON certificate_sans (san_value);
 CREATE INDEX idx_certificate_sans_cert_order ON certificate_sans (certificate_id, san_order);
 -- Indexes for common queries
-CREATE INDEX idx_certificates_fingerprint ON certificates (fingerprint);
 CREATE INDEX idx_certificates_valid_to ON certificates (valid_to);
 CREATE INDEX idx_certificates_created_on ON certificates (created_on);
 CREATE INDEX idx_certificates_deleted_on ON certificates (deleted_on) WHERE deleted_on IS NULL;
