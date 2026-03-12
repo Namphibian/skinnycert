@@ -1,0 +1,65 @@
+name: CI (docker-compose integration)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: integration
+
+    env:
+      # DATABASE_URL used by cargo/sqlx during build & tests
+      DATABASE_URL: postgres://skinnycert_user:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/skinnycert
+      RUST_LOG: info
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx (ensures docker CLI available)
+        uses: docker/setup-buildx-action@v3
+
+      - name: Start postgres via docker-compose
+        uses: docker/compose-action@v2
+        with:
+          compose-file: ./compose.yaml
+          args: up -d postgres
+
+      - name: Show postgres logs (tail)
+        run: docker-compose -f ./compose.yaml logs -f --tail=100 postgres &
+      
+      - name: Wait for Postgres to be ready
+        run: |
+          for i in $(seq 1 60); do
+            # your compose sets container_name: skinnycert-postgres
+            docker exec skinnycert-postgres pg_isready -U skinnycert_user -d skinnycert && break
+            echo "waiting for postgres..."
+            sleep 1
+          done
+
+      - name: Install psql client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Verify schema applied
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          # list tables to confirm init_db.sql ran
+          psql -h localhost -U skinnycert_user -d skinnycert -c '\dt'
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run tests
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: cargo test --verbose
+
+      - name: Tear down docker-compose
+        if: always()
+        run: docker-compose -f ./compose.yaml down -v
