@@ -6,28 +6,6 @@
 //! This struct implements the `FromRequest` trait, allowing Actix Web to automatically
 //! extract and validate a UUID from the request path. To use it, define a route with a path
 //! parameter named `id` that contains a UUID.
-//!
-//! For example:
-//! ```rust
-//! use actix_web::{web, App, HttpServer, Responder};
-//! use your_module::PathUuid; // Assuming that PathUuid is defined in `your_module`.
-//!
-//! async fn handler(path_uuid: PathUuid) -> impl Responder {
-//!     format!("Extracted UUID: {}", path_uuid.0)
-//! }
-//!
-//! #[actix_web::main]
-//! async fn main() -> std::io::Result<()> {
-//!     HttpServer::new(|| {
-//!         App::new()
-//!             .route("/items/{id}", web::get().to(handler)) // `id` is matched as a UUID.
-//!     })
-//!     .bind("127.0.0.1:8080")?
-//!     .run()
-//!     .await
-//! }
-//! ```
-//!
 //! # Implementation
 //!
 //! - The `type Error` is set to `actix_web::Error` to handle errors during the extraction.

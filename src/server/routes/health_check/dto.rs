@@ -2,7 +2,7 @@ use serde::Serialize;
 
 /// Represents the JSON payload returned by the `/health` endpoint.
 ///
-/// The health check response wraps a detailed system and processes 
+/// The health check response wraps a detailed system and processes
 /// memory usage information inside a [`MemoryInfo`] struct.
 ///
 /// # Example

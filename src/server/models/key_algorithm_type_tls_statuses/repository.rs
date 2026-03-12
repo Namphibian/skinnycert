@@ -11,7 +11,7 @@ impl KeyAlgorithmTypeTlsStatusRepository {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-    
+
     #[tracing::instrument(name = "DB Read Key Algorithm Type TLS Statuses",level = tracing::Level::DEBUG)]
     pub async fn find_all(&self) -> Result<Vec<KeyAlgorithmTypeTlsStatus>, RepositoryError> {
         let results = sqlx::query_as::<_, KeyAlgorithmTypeTlsStatus>(

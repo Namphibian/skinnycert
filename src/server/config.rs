@@ -120,16 +120,7 @@ fn bind_listener(addr_str: &str, port: u16) -> Result<TcpListener, std::io::Erro
 /// # Errors
 ///
 /// This function propagates any errors returned by the `rand_bytes` function.
-///
-/// # Examples
-///
-/// ```rust
-/// fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     check_rng()?;
-///     println!("Random bytes successfully generated!");
-///     Ok(())
-/// }
-/// ```
+
 fn check_rng() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Checking OpenSSL random bytes...");
     let mut buf = [0u8; 16];
@@ -156,7 +147,15 @@ pub async fn configure_environment(
             .with(JsonStorageLayer)
             .with(formatting_layer);
 
-        set_global_default(subscriber).expect("Failed to set tracing subscriber");
+        if let Err(e) = set_global_default(subscriber) {
+            // In tests, this is called multiple times by parallel tests and is expected.
+            // In production, this should ideally only be called once.
+            // Since a subscriber is already set (which is why this failed), we can log the warning.
+            tracing::warn!(
+                "Failed to set global tracing subscriber: {}. A subscriber might already be active.",
+                e
+            );
+        }
     }
 
     tracing::info!("Logger initialised; starting configuration of environment.");

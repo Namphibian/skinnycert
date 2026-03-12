@@ -117,7 +117,3 @@ pub struct CertificateSan {
     pub san_order: i32,
     pub created_on: DateTime<Utc>,
 }
-
-
-
-

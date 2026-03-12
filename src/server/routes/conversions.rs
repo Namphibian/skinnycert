@@ -19,7 +19,6 @@
 
 use thiserror::Error;
 
-
 #[derive(Debug, Error)]
 pub enum ConversionError {
     /// A required field was missing in the database model.
@@ -73,7 +72,7 @@ pub fn validate_optional_str(
         }
 
         if v.len() > max_len {
-            return Err(ConversionError::OutOfRange(
+            return Err(ConversionError::InvalidValue(
                 field,
                 format!("Field exceeds maximum length of {}", max_len),
             ));
@@ -81,7 +80,6 @@ pub fn validate_optional_str(
     }
     Ok(())
 }
-
 
 pub fn is_valid_dns_name(s: &str) -> bool {
     let dns_regex = regex::Regex::new(r"^[a-zA-Z0-9.-]+$").unwrap();
@@ -91,5 +89,3 @@ pub fn is_valid_dns_name(s: &str) -> bool {
 pub fn is_valid_ip(s: &str) -> bool {
     s.parse::<std::net::IpAddr>().is_ok()
 }
-
-

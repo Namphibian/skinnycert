@@ -26,7 +26,6 @@ pub fn run(
             .configure(configure_key_algorithm_type_tls_status_routes)
             .configure(configure_key_algorithm_status_routes)
             .configure(configure_certificate_route)
-
     })
     .workers(worker_threads as usize)
     .listen(listener)?

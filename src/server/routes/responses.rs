@@ -44,7 +44,7 @@ impl ResponseError for RepositoryError {
             }
             RepositoryError::InvalidToken => actix_web::http::StatusCode::BAD_REQUEST,
             RepositoryError::InvalidTimestamp => actix_web::http::StatusCode::BAD_REQUEST,
-            RepositoryError::InvalidUuid => actix_web::http::StatusCode::BAD_REQUEST
+            RepositoryError::InvalidUuid => actix_web::http::StatusCode::BAD_REQUEST,
         }
     }
 
@@ -121,7 +121,8 @@ pub fn to_response_list<M, D, E>(result: Result<Vec<M>, E>) -> HttpResponse
 where
     D: TryFrom<M> + serde::Serialize,
     D::Error: std::fmt::Display,
-    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug, M: std::fmt::Debug
+    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug,
+    M: std::fmt::Debug,
 {
     match result {
         Ok(models) => {
@@ -160,7 +161,8 @@ pub fn to_response<M, D, E>(result: Result<Option<M>, E>) -> HttpResponse
 where
     D: TryFrom<M> + serde::Serialize,
     D::Error: std::fmt::Display,
-    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug, M: std::fmt::Debug
+    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug,
+    M: std::fmt::Debug,
 {
     match result {
         Ok(Some(model)) => match D::try_from(model) {
@@ -198,7 +200,8 @@ pub fn to_patch_response<M, D, E>(result: Result<PatchResult<M>, E>) -> HttpResp
 where
     D: TryFrom<M> + serde::Serialize,
     D::Error: std::fmt::Display,
-    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug, M: std::fmt::Debug
+    E: Into<RepositoryError> + std::fmt::Display + std::fmt::Debug,
+    M: std::fmt::Debug,
 {
     match result {
         Ok(PatchResult::Updated(model)) => {
@@ -281,4 +284,3 @@ where
         }
     }
 }
-

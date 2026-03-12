@@ -1,0 +1,69 @@
+name: CI (docker-compose integration)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: integration
+
+    env:
+      DATABASE_URL: postgres://skinnycert_user:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/skinnycert
+      RUST_LOG: info
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install docker-compose standalone and psql client
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y curl ca-certificates postgresql-client
+          COMPOSE_VER="v2.20.2"
+          sudo curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VER}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version
+
+      - name: Start postgres via docker-compose
+        run: |
+          # Ensure any previous stack and volumes are removed so init_db.sql runs fresh
+          docker-compose -f ./compose.yaml down -v || true
+          docker-compose -f ./compose.yaml up -d postgres
+          docker-compose -f ./compose.yaml logs --tail=100 postgres || true
+
+      - name: Wait for Postgres to be ready on localhost
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          for i in $(seq 1 60); do
+            pg_isready -h localhost -p 5432 -U skinnycert_user -d skinnycert && break
+            echo "waiting for postgres on localhost:5432..."
+            sleep 1
+          done
+          # show a short status after waiting
+          docker-compose -f ./compose.yaml ps
+          docker-compose -f ./compose.yaml logs --tail=200 postgres || true
+
+      - name: Verify schema applied using host psql
+        env:
+          PGPASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+        run: |
+          # Confirm tables exist (init_db.sql should have run)
+          psql -h localhost -U skinnycert_user -d skinnycert -c '\dt'
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run tests
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: cargo test --verbose
+
+      - name: Tear down docker-compose
+        if: always()
+        run: docker-compose -f ./compose.yaml down -v
