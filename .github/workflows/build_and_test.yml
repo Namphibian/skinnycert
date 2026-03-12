@@ -11,7 +11,7 @@ jobs:
 
     env:
       DATABASE_URL: postgres://skinnycert_user:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/skinnycert
-      RUST_LOG: debug
+      RUST_LOG: info
 
     steps:
       - name: Checkout repository
