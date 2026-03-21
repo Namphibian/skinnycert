@@ -12,7 +12,7 @@ macro_rules! key_path {
     };
 }
 const PATH: &str = key_path!();
-const PATH_WITH_ID: &str = key_path!("/{id}");
+// const PATH_WITH_ID: &str = key_path!("/{id}");
 
 pub fn configure_key_algorithm_type_tls_status_routes(cfg: &mut web::ServiceConfig) {
     cfg.route(PATH, web::get().to(handler::get_handler));

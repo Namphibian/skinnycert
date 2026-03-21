@@ -1,15 +1,13 @@
 use super::dto::{CertificateInfoResponse, CreateCertificateRequest, PatchCertificateRequest};
-use crate::server::models::certificates::db::CertificateInfo;
 use crate::server::models::certificates::repository::CertificateRepository;
 use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
 
-use crate::server::models::responses::RepositoryError;
-use crate::server::routes::responses::{to_delete_response, to_response, to_response_paged};
 use actix_web::{web, HttpResponse, Responder};
 
 use crate::server::models::certificates::filters::CertificateFilterParams;
 use crate::server::models::key_algorithms::db::{GenerateCertificateSigningRequest, KeyPair};
 use crate::server::models::shared::{CertificateSubjectFields, CsrGenerationParams};
+use crate::{to_delete_response, to_response, to_response_paged};
 use uuid::Uuid;
 
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
@@ -19,9 +17,7 @@ pub async fn get_handler(
 ) -> impl Responder {
     let repo = CertificateRepository::new(pool.get_ref().clone());
     let filter = query.into_inner();
-    to_response_paged::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
-        repo.find_all_paged(&filter).await,
-    )
+    to_response_paged!(repo.find_all_paged(&filter).await, CertificateInfoResponse)
 }
 
 #[tracing::instrument(name = "Create Certificate Handler", skip(pool, payload))]
@@ -104,11 +100,10 @@ pub async fn post_handler(
         )
         .await;
     match cert_id {
-        Ok(cert_id) => Ok(to_response::<
-            CertificateInfo,
-            CertificateInfoResponse,
-            RepositoryError,
-        >(certificate_repo.find_by_id(cert_id).await)),
+        Ok(cert_id) => Ok(to_response!(
+            certificate_repo.find_by_id(cert_id).await,
+            CertificateInfoResponse
+        )),
         Err(e) => {
             tracing::error!("Certificate creation failed: {:?}", e);
             Err(actix_web::error::ErrorInternalServerError(
@@ -125,8 +120,7 @@ pub async fn get_by_id_handler(
 ) -> impl Responder {
     let cert_id = path.into_inner();
     let repo = CertificateRepository::new(pool.get_ref().clone());
-    to_response::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
-        repo.find_by_id(cert_id).await,
+    to_response!(repo.find_by_id(cert_id).await,CertificateInfoResponse
     )
 }
 
@@ -153,7 +147,7 @@ pub async fn patch_handler(
         Ok(None) => {
             return HttpResponse::NotFound().json(serde_json::json!({
                 "error": "Certificate not found"
-            }))
+            }));
         }
         Err(e) => {
             tracing::error!("Failed to fetch certificate: {}", e);
@@ -189,8 +183,8 @@ pub async fn patch_handler(
     {
         Ok(_) => {
             // Retrieve updated certificate
-            to_response::<CertificateInfo, CertificateInfoResponse, RepositoryError>(
-                repo.find_by_id(cert_id).await,
+            to_response!(
+                repo.find_by_id(cert_id).await, CertificateInfoResponse
             )
         }
         Err(e) => {
@@ -209,5 +203,5 @@ pub async fn delete_handler(
 ) -> impl Responder {
     let cert_id = path.into_inner();
     let repo = CertificateRepository::new(pool.get_ref().clone());
-    to_delete_response::<RepositoryError>(repo.delete_by_id(cert_id).await)
+    to_delete_response!(repo.delete_by_id(cert_id).await)
 }

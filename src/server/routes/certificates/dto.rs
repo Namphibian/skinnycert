@@ -8,8 +8,7 @@ use crate::server::routes::keys::dto::{KeyAlgorithmResponse, KeyAlgorithmStatusR
 use chrono::{DateTime, Utc};
 use openssl::asn1::Asn1Time;
 use openssl::pkey::PKey;
-use openssl::stack::Stack;
-use openssl::x509::{X509VerifyResult, X509};
+use openssl::x509::X509;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 

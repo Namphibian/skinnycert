@@ -3,13 +3,13 @@ execution:
   - scenario: rsa_scenario
     concurrency: 3
     ramp-up: 30s
-    hold-for: 5m
+    hold-for: 2m
     executor: gatling
 
   - scenario: ecdsa_scenario
     concurrency: 3
     ramp-up: 30s
-    hold-for: 5m
+    hold-for: 2m
     executor: gatling
 
 settings:
@@ -25,19 +25,21 @@ scenarios:
 
     requests:
 
-#      - label: "RSA: GET /keys"
-#        method: GET
-#        url: "/keys"
-#
-#      - label: "RSA: GET /keys/{id}/keypair"
-#        method: GET
-#        url: "/keys/64d63a36-1593-4896-92b3-ae7887ee7528/keypair"
+      - label: "RSA: GET /keys"
+        method: GET
+        url: "/keys?algorithmType=RSA&strength=2048"
+        extract-jsonpath:
+          rsa_2048_id: "[0].id"
+
+      - label: "RSA: GET /keys/{id}/keypair"
+        method: GET
+        url: "/keys/${rsa_2048_id}/keypair"
 
       - label: "RSA: POST /certificates"
         method: POST
         url: "/certificates"
         body:
-          key_algorithm_id: "64d63a36-1593-4896-92b3-ae7887ee7528"
+          key_algorithm_id: "${rsa_2048_id}"
           subject:
             organization: "LoadTest Corp"
             organizational_unit: "QA"
@@ -49,10 +51,9 @@ scenarios:
             - "rsa.loadtest.example.com"
           validity_days: 365
 
-#      - label: "RSA: GET /certificates"
-#        method: GET
-#        url: "/certificates"
-
+      - label: "RSA: GET /certificates"
+        method: GET
+        url: "/certificates?algorithmType=RSA&limit=150&direction=next"
 
   ecdsa_scenario:
     default-address: "http://127.0.0.1:9090"
@@ -61,19 +62,22 @@ scenarios:
 
     requests:
 
-#      - label: "ECDSA: GET /keys"
-#        method: GET
-#        url: "/keys"
-#
-#      - label: "ECDSA: GET /keys/{id}/keypair"
-#        method: GET
-#        url: "/keys/b9c808cd-48b6-476e-ae1d-42f615456618/keypair"
+      - label: "ECDSA: GET /keys"
+        method: GET
+        url: "/keys?algorithmType=ECDSA&strength=384"
+        extract-jsonpath:
+          ecdsa_id: "[0].id"
+
+
+      - label: "ECDSA: GET /keys/{id}/keypair"
+        method: GET
+        url: "/keys/${ecdsa_id}/keypair"
 
       - label: "ECDSA: POST /certificates"
         method: POST
         url: "/certificates"
         body:
-          key_algorithm_id: "b9c808cd-48b6-476e-ae1d-42f615456618"
+          key_algorithm_id: "${ecdsa_id}"
           subject:
             organization: "LoadTest Corp"
             organizational_unit: "QA"
@@ -87,9 +91,9 @@ scenarios:
             - "ecdsa3.loadtest.example.com"
           validity_days: 365
 
-#      - label: "ECDSA: GET /certificates"
-#        method: GET
-#        url: "/certificates"
+      - label: "ECDSA: GET /certificates"
+        method: GET
+        url: "/certificates?algorithmType=ECDSA&limit=150&direction=next"
 
 
 reporting:
@@ -99,5 +103,5 @@ reporting:
 modules:
   gatling:
     properties:
-      version: 3.11.3
-      download-link: "https://repo1.maven.org/maven2/io/gatling/highcharts/gatling-charts-highcharts-bundle/3.11.3/gatling-charts-highcharts-bundle-3.11.3-bundle.zip"
+      version: 3.13.5
+      download-link: "https://repo1.maven.org/maven2/io/gatling/highcharts/gatling-charts-highcharts-bundle/3.13.5/gatling-charts-highcharts-bundle-3.13.5-bundle.zip"

@@ -18,6 +18,13 @@ profiles:
       host: http://127.0.0.1:9090
 
 requests:
+  key_status_folder:
+    name: Key Status
+    requests:
+      get_key_status:
+        name: Get Key Status
+        method: GET
+        url: "{{ host }}/key_statuses"
   certificates_folder:
     name: Certificates
     requests:
@@ -80,7 +87,7 @@ requests:
       list_all_rsa_algo:
         name: List RSA Keys
         method: GET
-        url: "{{ host }}/keys?algorithmType=RSA"
+        url: "{{ host }}/keys?algorithmType=RSA&strength=2048"
       list_all_ecdsa_algo:
         name: List All ECDSA Keys
         method: GET

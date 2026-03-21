@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use skinnycert::server::models::key_algorithms::db::KeyPair;
 use skinnycert::server::models::responses::{PatchResult, RepositoryError};
 use skinnycert::server::routes::responses::{
-    key_pair_response, to_patch_response, to_response, to_response_list, KeyPairResponse,
+KeyPairResponse,
+};
+use skinnycert::{
+    key_pair_response, to_patch_response, to_response, to_response_list,
 };
 
 #[derive(Serialize)]
@@ -123,7 +126,7 @@ async fn test_repository_error_response() {
 async fn test_to_response_list_ok() {
     let models = vec![MockModel { id: 1 }, MockModel { id: 2 }];
     let result: Result<Vec<MockModel>, RepositoryError> = Ok(models);
-    let resp = to_response_list::<MockModel, MockDto, RepositoryError>(result);
+    let resp = to_response_list!(result,  MockDto);
     assert_eq!(resp.status(), StatusCode::OK);
 
     let body_bytes = actix_web::body::to_bytes(resp.into_body()).await.unwrap();
@@ -137,14 +140,14 @@ async fn test_to_response_list_ok() {
 async fn test_to_response_list_err() {
     let result: Result<Vec<MockModel>, RepositoryError> =
         Err(RepositoryError::SerializationFailure);
-    let resp = to_response_list::<MockModel, MockDto, RepositoryError>(result);
+    let resp = to_response_list!(result, MockDto);
     assert_eq!(resp.status(), StatusCode::CONFLICT);
 }
 
 #[actix_web::test]
 async fn test_to_response_ok() {
     let result: Result<Option<MockModel>, RepositoryError> = Ok(Some(MockModel { id: 1 }));
-    let resp = to_response::<MockModel, MockDto, RepositoryError>(result);
+    let resp = to_response!(result, MockDto);
     assert_eq!(resp.status(), StatusCode::OK);
     let body_bytes = actix_web::body::to_bytes(resp.into_body()).await.unwrap();
     let body: MockDto = serde_json::from_slice(&body_bytes).unwrap();
@@ -154,7 +157,7 @@ async fn test_to_response_ok() {
 #[actix_web::test]
 async fn test_to_response_none() {
     let result: Result<Option<MockModel>, RepositoryError> = Ok(None);
-    let resp = to_response::<MockModel, MockDto, RepositoryError>(result);
+    let resp = to_response!(result, MockDto);
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
@@ -162,21 +165,21 @@ async fn test_to_response_none() {
 async fn test_to_patch_response_updated() {
     let result: Result<PatchResult<MockModel>, RepositoryError> =
         Ok(PatchResult::Updated(MockModel { id: 1 }));
-    let resp = to_patch_response::<MockModel, MockDto, RepositoryError>(result);
+    let resp = to_patch_response!(result, MockDto);
     assert_eq!(resp.status(), StatusCode::OK);
 }
 
 #[actix_web::test]
 async fn test_to_patch_response_not_modified() {
     let result: Result<PatchResult<MockModel>, RepositoryError> = Ok(PatchResult::NotModified);
-    let resp = to_patch_response::<MockModel, MockDto, RepositoryError>(result);
+    let resp = to_patch_response!(result, MockDto);
     assert_eq!(resp.status(), StatusCode::NOT_MODIFIED);
 }
 
 #[actix_web::test]
 async fn test_to_patch_response_not_found() {
     let result: Result<PatchResult<MockModel>, RepositoryError> = Ok(PatchResult::NotFound);
-    let resp = to_patch_response::<MockModel, MockDto, RepositoryError>(result);
+    let resp = to_patch_response!(result, MockDto);
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
 }
 
@@ -198,7 +201,7 @@ impl KeyPair for MockKeyAlg {
 #[actix_web::test]
 async fn test_key_pair_response_ok() {
     let result: Result<Option<MockKeyAlg>, RepositoryError> = Ok(Some(MockKeyAlg));
-    let resp = key_pair_response(result, "not found");
+    let resp = key_pair_response!(result, "not found");
     assert_eq!(resp.status(), StatusCode::OK);
     let body_bytes = actix_web::body::to_bytes(resp.into_body()).await.unwrap();
     let body: KeyPairResponse = serde_json::from_slice(&body_bytes).unwrap();
@@ -209,7 +212,7 @@ async fn test_key_pair_response_ok() {
 #[actix_web::test]
 async fn test_key_pair_response_none() {
     let result: Result<Option<MockKeyAlg>, RepositoryError> = Ok(None);
-    let resp = key_pair_response(result, "custom not found msg");
+    let resp = key_pair_response!(result, "custom not found msg");
     assert_eq!(resp.status(), StatusCode::NOT_FOUND);
     let body_bytes = actix_web::body::to_bytes(resp.into_body()).await.unwrap();
     let body: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
