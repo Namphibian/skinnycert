@@ -6,6 +6,10 @@ use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResp
 use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
 use crate::server::routes::keys::dto::{KeyAlgorithmResponse, KeyAlgorithmStatusResponse};
 use chrono::{DateTime, Utc};
+use openssl::asn1::Asn1Time;
+use openssl::pkey::PKey;
+use openssl::stack::Stack;
+use openssl::x509::{X509VerifyResult, X509};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -243,7 +247,122 @@ impl CreateCertificateRequest {
 
 /// DTO for patching a certificate with signed cert from CA
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PatchCertificateDto {
+pub struct PatchCertificateRequest {
     pub cert_pem: String,
     pub chain_pem: Option<String>,
 }
+
+impl PatchCertificateRequest {
+    pub fn validate(
+        &self,
+        _csr_pem: &str,
+        public_key_pem: &str,
+    ) -> Result<(DateTime<Utc>, DateTime<Utc>, String), ConversionError> {
+        // --- CERTIFICATE PEM VALIDATION ---------------------------------------
+        let cert = X509::from_pem(self.cert_pem.as_bytes()).map_err(|e| {
+            ConversionError::InvalidValue("cert_pem", format!("Invalid PEM certificate: {}", e))
+        })?;
+
+        // --- PUBLIC KEY MATCH VALIDATION --------------------------------------
+        // We compare the public key in the provided certificate with the public key
+        // stored in the database (which was generated when the CSR was created).
+        let cert_pubkey = cert.public_key().map_err(|e| {
+            ConversionError::CryptoParameter(
+                "cert_pem",
+                format!("Failed to extract public key: {}", e),
+            )
+        })?;
+
+        let stored_pubkey = PKey::public_key_from_pem(public_key_pem.as_bytes()).map_err(|e| {
+            ConversionError::CryptoParameter(
+                "public_key_pem",
+                format!("Failed to parse stored public key: {}", e),
+            )
+        })?;
+
+        if !cert_pubkey.public_eq(&stored_pubkey) {
+            return Err(ConversionError::Inconsistent(
+                "cert_pem",
+                "Certificate public key does not match the stored public key".into(),
+            ));
+        }
+
+        // --- CHAIN VALIDATION -------------------------------------------------
+        let mut chain = Vec::new();
+
+        if let Some(chain_pem) = &self.chain_pem {
+            chain = X509::stack_from_pem(chain_pem.as_bytes()).map_err(|e| {
+                ConversionError::InvalidValue("chain_pem", format!("Invalid PEM chain: {}", e))
+            })?;
+        }
+
+        // Validate the chain relationship: each cert must be signed by the next one.
+        // The leaf cert (cert_pem) must be signed by the first cert in the chain (if present).
+        let mut to_verify = &cert;
+        for (i, issuer) in chain.iter().enumerate() {
+            let issuer_pubkey = issuer.public_key().map_err(|e| {
+                ConversionError::CryptoParameter(
+                    "chain_pem",
+                    format!("Failed to extract public key from cert at index {}: {}", i, e),
+                )
+            })?;
+
+            if to_verify.verify(&issuer_pubkey).map_err(|e| {
+                ConversionError::CryptoParameter(
+                    "chain_pem",
+                    format!("Verification error at index {}: {}", i, e),
+                )
+            })? == false
+            {
+                return Err(ConversionError::DomainViolation(
+                    "chain_pem",
+                    format!("Certificate at index {} did not sign the previous one", i),
+                ));
+            }
+            to_verify = issuer;
+        }
+
+        // --- EXTRACT METADATA -------------------------------------------------
+        let epoch = Asn1Time::from_unix(0).map_err(|e| {
+            ConversionError::CryptoParameter("cert_pem", format!("Failed to create epoch time: {}", e))
+        })?;
+
+        let valid_from_diff = epoch.diff(cert.not_before()).map_err(|e| {
+            ConversionError::CryptoParameter("cert_pem", format!("Invalid notBefore date: {}", e))
+        })?;
+        let valid_from = DateTime::from_timestamp(
+            (valid_from_diff.days as i64 * 86400) + valid_from_diff.secs as i64,
+            0,
+        )
+        .ok_or_else(|| {
+            ConversionError::CryptoParameter("cert_pem", "Invalid notBefore date".into())
+        })?;
+
+        let valid_to_diff = epoch.diff(cert.not_after()).map_err(|e| {
+            ConversionError::CryptoParameter("cert_pem", format!("Invalid notAfter date: {}", e))
+        })?;
+        let valid_to = DateTime::from_timestamp(
+            (valid_to_diff.days as i64 * 86400) + valid_to_diff.secs as i64,
+            0,
+        )
+        .ok_or_else(|| {
+            ConversionError::CryptoParameter("cert_pem", "Invalid notAfter date".into())
+        })?;
+
+        // Calculate SHA-256 fingerprint
+        let fingerprint = cert
+            .digest(openssl::hash::MessageDigest::sha256())
+            .map_err(|e| {
+                ConversionError::CryptoParameter("cert_pem", format!("Failed to digest cert: {}", e))
+            })?;
+
+        // Manual hex encoding to avoid 'hex' crate dependency
+        let fingerprint_hex = fingerprint
+            .iter()
+            .map(|b| format!("{:02x}", b))
+            .collect::<String>();
+
+        Ok((valid_from, valid_to, fingerprint_hex))
+    }
+}
+

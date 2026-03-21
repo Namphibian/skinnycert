@@ -90,6 +90,42 @@ impl CertificateRepository {
         tx.commit().await.map_err(map_sqlx_error)?;
         Ok(cert_id)
     }
+    #[tracing::instrument(name = "DB Update Certificate (Patch)", level = tracing::Level::DEBUG)]
+    pub async fn patch_certificate(
+        &self,
+        id: Uuid,
+        cert_pem: &str,
+        chain_pem: Option<&str>,
+        fingerprint: &str,
+        valid_from: DateTime<Utc>,
+        expires_at: DateTime<Utc>,
+    ) -> Result<(), RepositoryError> {
+        sqlx::query(
+            r#"
+            UPDATE certificates
+            SET cert_pem = $2,
+                chain_pem = $3,
+                fingerprint = $4,
+                valid_from = $5,
+                valid_to = $6,
+                cert_uploaded_on = CURRENT_TIMESTAMP,
+                updated_on = CURRENT_TIMESTAMP
+            WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .bind(cert_pem)
+        .bind(chain_pem)
+        .bind(fingerprint)
+        .bind(valid_from)
+        .bind(expires_at)
+        .execute(&self.pool)
+        .await
+        .map_err(map_sqlx_error)?;
+
+        Ok(())
+    }
+
     #[tracing::instrument(name = "DB Delete Certificate By ID", level = tracing::Level::DEBUG)]
     pub async fn delete_by_id(&self, id: Uuid) -> Result<Option<Uuid>, RepositoryError> {
         // If your DB supports RETURNING, fetch_optional returns Some(row) when deleted
