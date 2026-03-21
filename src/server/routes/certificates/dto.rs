@@ -10,11 +10,12 @@ use openssl::asn1::Asn1Time;
 use openssl::pkey::PKey;
 use openssl::x509::X509;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::server::models::shared::PagedResult;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CertificateListResponse {
     pub items: Vec<CertificateInfoResponse>,
@@ -34,7 +35,7 @@ impl From<PagedResult<CertificateInfoResponse>> for CertificateListResponse {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PemDataResponse {
     pub csr_pem: String,
@@ -44,7 +45,7 @@ pub struct PemDataResponse {
     pub chain_pem: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SubjectDataResponse {
     // Subject details
@@ -55,14 +56,14 @@ pub struct SubjectDataResponse {
     pub locality: Option<String>,
     pub email: Option<String>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SansDataResponse {
     // SANs
     pub sans: Vec<String>,
     pub common_name: Option<String>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct X509MetadataResponse {
     // Certificate metadata
@@ -70,7 +71,7 @@ pub struct X509MetadataResponse {
     pub valid_from: Option<DateTime<Utc>>,
     pub valid_to: Option<DateTime<Utc>>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CertificateInfoResponse {
     pub id: Uuid,
@@ -157,7 +158,7 @@ impl TryFrom<CertificateInfo> for CertificateInfoResponse {
 }
 
 /// DTO for creating a new certificate
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct CertificateSubject {
     pub organization: Option<String>,
     pub organizational_unit: Option<String>,
@@ -166,7 +167,7 @@ pub struct CertificateSubject {
     pub locality: Option<String>,
     pub email: Option<String>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct CreateCertificateRequest {
     pub key_algorithm_id: Uuid,
     pub subject: CertificateSubject,
@@ -245,7 +246,7 @@ impl CreateCertificateRequest {
 }
 
 /// DTO for patching a certificate with signed cert from CA
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PatchCertificateRequest {
     pub cert_pem: String,
     pub chain_pem: Option<String>,

@@ -1,4 +1,5 @@
 use crate::server::logger::SkinnycertRouteSpanBuilder;
+use crate::server::openapi::ApiDoc;
 use crate::server::routes::certificates::configure_certificate_route;
 use crate::server::routes::health_check::configure_health_check;
 use crate::server::routes::key_statuses::configure_key_algorithm_status_routes;
@@ -10,6 +11,8 @@ use actix_web::{web, App, HttpServer};
 use sqlx::PgPool;
 use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 pub fn run(
     listener: TcpListener,
@@ -20,6 +23,10 @@ pub fn run(
         App::new()
             .app_data(web::Data::new(db_pool.clone()))
             .wrap(TracingLogger::<SkinnycertRouteSpanBuilder>::new())
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}")
+                    .url("/api-docs/openapi.json", ApiDoc::openapi()),
+            )
             .configure(configure_health_check)
             .configure(configure_key_algorithm_routes)
             .configure(configure_key_algorithm_type_routes)

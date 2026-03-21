@@ -29,8 +29,15 @@ use std::fs;
 /// Panics if `/proc/meminfo` or `/proc/self/status` cannot be read.
 /// This behavior is fine for internal health checks but can be
 /// changed to return HTTP 500 if desired.
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses(
+        (status = 200, description = "Basic health check", body = HealthCheckResponse)
+    )
+)]
 #[tracing::instrument(name = "Healthcheck GET Request.")]
-pub async fn get_handler() -> impl Responder {
+pub async fn get_health() -> impl Responder {
     // --- Free system memory ---
     let free_memory_kb = get_free_memory();
 
@@ -57,7 +64,7 @@ pub async fn get_handler() -> impl Responder {
 /// # Returns
 /// - [`HttpResponse::MethodNotAllowed`]
 #[tracing::instrument(name = "Healthcheck POST Request.")]
-pub async fn post_handler() -> impl Responder {
+pub async fn post_health() -> impl Responder {
     HttpResponse::MethodNotAllowed()
 }
 

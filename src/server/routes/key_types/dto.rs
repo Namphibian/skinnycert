@@ -3,9 +3,10 @@ use crate::server::routes::conversions::ConversionError;
 use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResponse;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmTypeResponse {
     pub id: Uuid,

@@ -1,6 +1,7 @@
 use serde::Deserialize;
+use utoipa::IntoParams;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmFilterParams {
     pub algorithm_type: Option<String>,

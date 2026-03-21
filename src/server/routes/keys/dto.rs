@@ -4,9 +4,10 @@ use crate::server::routes::key_type_tls_statuses::dto::KeyAlgorithmTlsStatusResp
 use crate::server::routes::key_types::dto::KeyAlgorithmTypeResponse;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmStatusResponse {
     pub id: Uuid,
@@ -16,7 +17,7 @@ pub struct KeyAlgorithmStatusResponse {
     pub updated_on: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmResponse {
     // key_algorithms

@@ -2,10 +2,12 @@ use crate::server::models::key_algorithm_statuses::db::KeyAlgorithmStatus;
 use crate::server::routes::conversions::ConversionError;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+#[schema(as = KeyStatusResponse)]
 pub struct KeyAlgorithmStatusResponse {
     pub id: Uuid,
     pub name: String,

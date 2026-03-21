@@ -1,14 +1,15 @@
 use crate::server::models::responses::RepositoryError;
 use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ErrorResponse {
     pub error: String,
     pub details: Option<String>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyPairResponse {
     pub public_key: String,

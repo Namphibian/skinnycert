@@ -1,9 +1,10 @@
 use crate::server::models::shared::PageDirection;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::IntoParams;
 
 /// Filter parameters for querying certificates (cursor‑paging enabled)
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, IntoParams)]
 #[serde(rename_all = "camelCase")]
 pub struct CertificateFilterParams {
     pub common_name: Option<String>,

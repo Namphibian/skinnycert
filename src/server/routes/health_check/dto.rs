@@ -1,4 +1,5 @@
 use serde::Serialize;
+use utoipa::ToSchema;
 
 /// Represents the JSON payload returned by the `/health` endpoint.
 ///
@@ -17,7 +18,7 @@ use serde::Serialize;
 ///
 /// This structure is serialized automatically by Actix Web when returned
 /// with `HttpResponse::Ok().json(HealthCheckResponse { ... })`.
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct HealthCheckResponse {
     /// Contains system and process memory metrics.
@@ -29,7 +30,7 @@ pub struct HealthCheckResponse {
 /// This struct is nested inside [`HealthCheckResponse`] and provides
 /// low-level runtime information useful for diagnostics, monitoring,
 /// and container health checks.
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MemoryInfo {
     /// Amount of free system memory (RAM) available, in kilobytes.

@@ -2,9 +2,10 @@ use crate::server::models::key_algorithm_type_tls_statuses::db::KeyAlgorithmType
 use crate::server::routes::conversions::ConversionError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyAlgorithmTlsStatusResponse {
     pub id: Uuid,

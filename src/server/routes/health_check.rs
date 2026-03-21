@@ -1,8 +1,8 @@
-mod dto;
-mod handler;
+pub mod dto;
+pub mod handler;
 
 use actix_web::web;
-use handler::{get_handler, post_handler};
+use handler::{get_health, post_health};
 
 /// The base path for the health check endpoint.
 ///
@@ -15,15 +15,15 @@ const PATH: &'static str = "/health";
 /// This function is intended to be called inside your Actix Web application setup:
 ///
 /// It registers two routes:
-/// - `GET /health` → handled by [`get_handler`], typically used for readiness checks.
-/// - `POST /health` → handled by [`post_handler`], often used for more detailed or authenticated liveness checks.
+/// - `GET /health` → handled by [`get_health`], typically used for readiness checks.
+/// - `POST /health` → handled by [`post_health`], often used for more detailed or authenticated liveness checks.
 ///
 /// # Parameters
 /// - `cfg`: The mutable [`ServiceConfig`] used to register routes with the Actix Web app.
 
 pub fn configure_health_check(cfg: &mut web::ServiceConfig) {
     // Register a GET route for health checking
-    cfg.route(PATH, web::get().to(get_handler));
+    cfg.route(PATH, web::get().to(get_health));
     // Register a POST route for health checking
-    cfg.route(PATH, web::post().to(post_handler));
+    cfg.route(PATH, web::post().to(post_health));
 }

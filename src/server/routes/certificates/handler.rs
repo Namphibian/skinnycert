@@ -1,6 +1,10 @@
-use super::dto::{CertificateInfoResponse, CreateCertificateRequest, PatchCertificateRequest};
+use super::dto::{
+    CertificateInfoResponse, CertificateListResponse, CreateCertificateRequest,
+    PatchCertificateRequest,
+};
 use crate::server::models::certificates::repository::CertificateRepository;
 use crate::server::models::key_algorithms::repository::KeyAlgorithmRepository;
+use crate::server::routes::responses::ErrorResponse;
 
 use actix_web::{web, HttpResponse, Responder};
 
@@ -10,8 +14,17 @@ use crate::server::models::shared::{CertificateSubjectFields, CsrGenerationParam
 use crate::{to_delete_response, to_response, to_response_paged};
 use uuid::Uuid;
 
+#[utoipa::path(
+    get,
+    path = "/certificates",
+    params(CertificateFilterParams),
+    responses(
+        (status = 200, description = "List all certificates", body = CertificateListResponse),
+        (status = 500, description = "Internal Server Error", body = ErrorResponse)
+    )
+)]
 #[tracing::instrument(name = "Get All Certificates", skip(pool))]
-pub async fn get_handler(
+pub async fn get_certificates(
     pool: web::Data<sqlx::PgPool>,
     query: web::Query<CertificateFilterParams>,
 ) -> impl Responder {
@@ -20,8 +33,19 @@ pub async fn get_handler(
     to_response_paged!(repo.find_all_paged(&filter).await, CertificateInfoResponse)
 }
 
+#[utoipa::path(
+    post,
+    path = "/certificates",
+    request_body = CreateCertificateRequest,
+    responses(
+        (status = 200, description = "Create certificate", body = CertificateInfoResponse),
+        (status = 400, description = "Bad Request", body = ErrorResponse),
+        (status = 404, description = "Key Algorithm Not Found", body = ErrorResponse),
+        (status = 500, description = "Internal Server Error", body = ErrorResponse)
+    )
+)]
 #[tracing::instrument(name = "Create Certificate Handler", skip(pool, payload))]
-pub async fn post_handler(
+pub async fn create_certificate(
     pool: web::Data<sqlx::PgPool>,
     payload: web::Json<CreateCertificateRequest>,
 ) -> Result<impl Responder, actix_web::Error> {
@@ -113,8 +137,20 @@ pub async fn post_handler(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/certificates/{id}",
+    responses(
+        (status = 200, description = "Get certificate by ID", body = CertificateInfoResponse),
+        (status = 404, description = "Not Found", body = ErrorResponse),
+        (status = 500, description = "Internal Server Error", body = ErrorResponse)
+    ),
+    params(
+        ("id" = Uuid, Path, description = "Certificate ID")
+    )
+)]
 #[tracing::instrument(name = "Get Certificate by ID Handler", skip(pool))]
-pub async fn get_by_id_handler(
+pub async fn get_certificate_by_id(
     pool: web::Data<sqlx::PgPool>,
     path: web::Path<Uuid>,
 ) -> impl Responder {
@@ -131,8 +167,22 @@ pub async fn put_handler() -> impl Responder {
     }))
 }
 
+#[utoipa::path(
+    patch,
+    path = "/certificates/{id}",
+    request_body = PatchCertificateRequest,
+    responses(
+        (status = 200, description = "Upload signed certificate", body = CertificateInfoResponse),
+        (status = 400, description = "Bad Request", body = ErrorResponse),
+        (status = 404, description = "Not Found", body = ErrorResponse),
+        (status = 500, description = "Internal Server Error", body = ErrorResponse)
+    ),
+    params(
+        ("id" = Uuid, Path, description = "Certificate ID")
+    )
+)]
 #[tracing::instrument(name = "Patch Certificate", skip(pool, payload))]
-pub async fn patch_handler(
+pub async fn patch_certificate(
     pool: web::Data<sqlx::PgPool>,
     path: web::Path<Uuid>,
     payload: web::Json<PatchCertificateRequest>,
@@ -196,8 +246,20 @@ pub async fn patch_handler(
         }
     }
 }
+#[utoipa::path(
+    delete,
+    path = "/certificates/{id}",
+    responses(
+        (status = 204, description = "Delete certificate"),
+        (status = 404, description = "Not Found", body = ErrorResponse),
+        (status = 500, description = "Internal Server Error", body = ErrorResponse)
+    ),
+    params(
+        ("id" = Uuid, Path, description = "Certificate ID")
+    )
+)]
 #[tracing::instrument(name = "Delete Certificate Handler", skip(pool))]
-pub async fn delete_handler(
+pub async fn delete_certificate(
     pool: web::Data<sqlx::PgPool>,
     path: web::Path<Uuid>,
 ) -> impl Responder {
