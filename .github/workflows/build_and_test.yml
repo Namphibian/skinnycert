@@ -1,8 +1,8 @@
-name: CI (docker-compose integration)
+name: CI (Push Run Tests)
 
 on:
   push:
-  pull_request:
+  
 
 jobs:
   test:
