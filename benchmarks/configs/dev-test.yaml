@@ -1,25 +1,25 @@
 ---
 execution:
   - scenario: rsa_scenario
-    concurrency: 3
-    ramp-up: 30s
-    hold-for: 2m
+    concurrency: 6
+    ramp-up: 10s
+    hold-for: 1m
     executor: gatling
 
   - scenario: ecdsa_scenario
-    concurrency: 3
-    ramp-up: 30s
-    hold-for: 2m
+    concurrency: 6
+    ramp-up: 10s
+    hold-for: 1m
     executor: gatling
 
 settings:
   env:
-    host: "http://127.0.0.1:9090"
+    host: "https://gateway.svc.docker.local:9443"
 
 scenarios:
 
   rsa_scenario:
-    default-address: "http://127.0.0.1:9090"
+    default-address: "https://gateway.svc.docker.local:9443"
     headers:
       Content-Type: application/json
 
@@ -56,7 +56,7 @@ scenarios:
         url: "/certificates?algorithmType=RSA&limit=150&direction=next"
 
   ecdsa_scenario:
-    default-address: "http://127.0.0.1:9090"
+    default-address: "https://gateway.svc.docker.local:9443"
     headers:
       Content-Type: application/json
 
