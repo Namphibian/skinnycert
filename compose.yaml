@@ -41,14 +41,30 @@ services:
     image: namphibian/skinnycert
     container_name: skinnycert-api-server
     hostname: api.svc.docker.local
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       RUST_LOG: info
-      SERVER_PORT: 3000           # API listens on this port internally
-      SERVER_ADDRESS: 127.0.0.1  # Only accessible to sidecar
-      WORKER_THREADS: 32
-    # Expose API port directly for troubleshooting / bypassing NGINX
+      SERVER_PORT: 9090
+      SERVER_ADDRESS: 0.0.0.0
+      WORKER_THREADS: 12
+
+      # Database Configuration
+      DATABASE_URL: postgresql://skinnycert_user:root123@postgres:5432/skinnycert
+      DB_MAX_CONNECTIONS: 12
+
+      #  Key Min Secure Size
+      #  Used to configure the min size for it to be considered secure in a TLS environment.
+      RSA_KEY_MIN_SUPPORTED_SIZE: 2048
+      RSA_KEY_MAX_SUPPORTED_SIZE: 4096
+
+
+      ENVIRONMENT: dev
+      SQLX_OFFLINE: true
+        # Expose API port directly for troubleshooting / bypassing NGINX
     ports:
-      - "3000:3000" # port that skinnycert listens on
+      - "9090:9090" # port that skinnycert listens on
       - "8443:8443" # https port must use MLTS
       - "80:80"
     networks:

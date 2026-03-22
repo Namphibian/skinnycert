@@ -120,7 +120,6 @@ ssls:
             hMxcAmq4TQQRaSYvIdOiVkg=
             -----END PRIVATE KEY-----
         ssl_protocols:
-            - TLSv1.2
             - TLSv1.3
         snis:
             - gateway.svc.docker.local
@@ -144,19 +143,19 @@ global_rules:
 #---------------------------------------------------------------------------------------------------------------
 # Consumer Definitions for the API
 # Defines various consumers for the API.
-# For brevity, BASIC HTTP authentication is used for these consumers.
+# Currently unused.
 #---------------------------------------------------------------------------------------------------------------
-consumers:
-    - username: note
-      plugins:
-          basic-auth:
-              username: note
-              password: note
-    - username: health
-      plugins:
-          basic-auth:
-              username: health
-              password: health
+# consumers:
+#     - username: note
+#       plugins:
+#           basic-auth:
+#               username: note
+#               password: note
+#     - username: health
+#       plugins:
+#           basic-auth:
+#               username: health
+#               password: health
 #---------------------------------------------------------------------------------------------------------------
 # Route Definitions
 # Defines routes for the API.
@@ -165,39 +164,44 @@ consumers:
 routes:
     -
         uri: /health
+        methods: ["GET", "POST"]
         service_id: 1
-        plugins:
-            basic-auth: {}
-            consumer-restriction:
-                rejected_msg: "Only users with the health permissions can view this."
-                whitelist:
-                    - health
     -
-        uri: /note
+        uri: /keys
+        methods: ["GET"]
         service_id: 1
-        plugins:
-            basic-auth: {}
-            consumer-restriction:
-                whitelist:
-                    - note
     -
-        uri: /posts
-        methods:
-            - GET
-        #---------------------------------------------------------------------------------------------------------------
-        # Setup a mock endpoint
-        # This is an example that could be used when mocking out responses.
-        #---------------------------------------------------------------------------------------------------------------
-        plugins:
-            mocking:
-                delay: 1
-                content_type: "application/json",
-                response_status: 200
-                response_schema:
-                    properties:
-                        title:
-                            example: "A new post"
-                            type: string
+        uri: /keys/*
+        methods: ["GET"]
+        service_id: 1
+    -
+        uri: /certificates
+        methods: ["GET", "POST"]
+        service_id: 1
+    -
+        uri: /certificates/*
+        methods: ["GET", "PATCH", "DELETE", "PUT"]
+        service_id: 1
+    -
+        uri: /key_types
+        methods: ["GET"]
+        service_id: 1
+    -
+        uri: /key_statuses
+        methods: ["GET"]
+        service_id: 1
+    -
+        uri: /key_type_tls_statuses
+        methods: ["GET"]
+        service_id: 1
+    -
+        uri: /swagger-ui/*
+        methods: ["GET"]
+        service_id: 1
+    -
+        uri: /api-docs/openapi.json
+        methods: ["GET"]
+        service_id: 1
 #---------------------------------------------------------------------------------------------------------------
 # Service Definition to Upstream (Rust API)
 # Defines a service that connects to the upstream Rust API.

@@ -21,7 +21,7 @@ path = "src/lib.rs"
 
 [dependencies]
 actix-web = "4.13.0"
-tokio = { version = "1.50.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.50.0", features = ["macros", "rt-multi-thread", "time"] }
 dotenvy = "0.15.7"
 serde = { version = "1.0.228", features = ["derive", "serde_derive"] }
 serde_json = "1.0.149"
@@ -45,7 +45,6 @@ utoipa-swagger-ui = { version = "9.0.2", features = [
     "actix-web",
  ] }
 utoipa-actix-web = { version = "0.1.2" }
-# sqlx-cli = "0.8.6"
 # sha2 = "0.10.9"
 # x509-parser = "0.18.0"
 # pem = "3.0.6"

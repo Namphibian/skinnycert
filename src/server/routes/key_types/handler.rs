@@ -7,7 +7,7 @@ use crate::to_response_list;
 
 #[utoipa::path(
     get,
-    path = "/key-types",
+    path = "/key_types",
     responses(
         (status = 200, description = "List all key algorithm types", body = [KeyAlgorithmTypeResponse]),
         (status = 500, description = "Internal Server Error", body = ErrorResponse)

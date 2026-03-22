@@ -85,6 +85,7 @@ This will spin up:
 ## 📜 Scripts
 
 - `cargo-watch-run.sh`: Runs the application with `cargo-watch`, automatically re-running on file changes.
+- `sqlx-prepare.sh`: Runs `cargo sqlx prepare` to generate the `.sqlx` metadata needed for offline SQLx compilation.
 - `compile-release.sh`: Compiles the application in release mode with optimizations for `x86_64-unknown-linux-gnu`.
 
 ## ⚙️ Configuration (Environment Variables)

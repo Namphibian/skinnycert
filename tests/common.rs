@@ -1,6 +1,4 @@
-use skinnycert::server::config::{
-    configure_environment, ServerListeningAddress, ServerPort,
-};
+use skinnycert::server::config::{configure_environment, ServerListeningAddress, ServerPort};
 use std::net::{IpAddr, Ipv4Addr};
 
 /// Spawns a new instance of the Skinnycert application bound to an ephemeral port.
@@ -25,7 +23,9 @@ pub async fn spawn_app() -> String {
         ServerListeningAddress::Is(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
         ServerPort::Is(0), // 0 tells the OS to assign a random free port
         8.into(),
-    ).await {
+    )
+    .await
+    {
         Ok(cfg) => cfg,
         Err(e) => {
             eprintln!("Configuration error: {}", e);
@@ -34,8 +34,13 @@ pub async fn spawn_app() -> String {
     };
 
     // Launch the Actix system server asynchronously.
-    let server = skinnycert::server::app::run(config.listener, config.worker_threads,config.db_pool)
-        .expect("Failed to bind address");
+    let server = skinnycert::server::app::run(
+        config.listener,
+        config.worker_threads,
+        config.db_pool,
+        config.environment,
+    )
+    .expect("Failed to bind address");
 
     // Spawn the server in the background (so test execution can continue).
     let _ = tokio::spawn(server);

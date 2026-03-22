@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Run the server using the pre-bound listener
-    run(config.listener, config.worker_threads, config.db_pool)?.await?;
+    run(config.listener, config.worker_threads, config.db_pool, config.environment)?.await?;
 
     Ok(())
 }

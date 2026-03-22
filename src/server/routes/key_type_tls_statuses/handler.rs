@@ -7,7 +7,7 @@ use crate::to_response_list;
 
 #[utoipa::path(
     get,
-    path = "/key-type-tls-statuses",
+    path = "/key_type_tls_statuses",
     responses(
         (status = 200, description = "List all key algorithm type TLS statuses", body = [KeyAlgorithmTlsStatusResponse]),
         (status = 500, description = "Internal Server Error", body = ErrorResponse)

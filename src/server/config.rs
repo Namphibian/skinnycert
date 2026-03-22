@@ -61,6 +61,7 @@ pub struct ServerRunTimeConfig {
     pub worker_threads: u16,
     pub listener: TcpListener,
     pub db_pool: PgPool, // Add database pool
+    pub environment: String, //DEV, QA, PROD
 }
 
 /// Configure database connection pool
@@ -78,11 +79,39 @@ async fn configure_database() -> Result<PgPool, Box<dyn std::error::Error>> {
         max_connections
     );
 
-    let pool = PgPoolOptions::new()
-        .max_connections(max_connections)
-        .connect(&database_url)
-        .await
-        .expect("Failed to connect to database");
+    let mut retry_count = 0;
+    let max_retries = 10;
+    let retry_delay = std::time::Duration::from_secs(2);
+
+    let pool = loop {
+        match PgPoolOptions::new()
+            .max_connections(max_connections)
+            .acquire_timeout(std::time::Duration::from_secs(5))
+            .connect(&database_url)
+            .await
+        {
+            Ok(pool) => break pool,
+            Err(e) => {
+                retry_count += 1;
+                if retry_count > max_retries {
+                    tracing::error!(
+                        "Failed to connect to database after {} attempts: {}",
+                        max_retries,
+                        e
+                    );
+                    return Err(e.into());
+                }
+                tracing::warn!(
+                    "Failed to connect to database (attempt {}/{}): {}. Retrying in {:?}...",
+                    retry_count,
+                    max_retries,
+                    e,
+                    retry_delay
+                );
+                tokio::time::sleep(retry_delay).await;
+            }
+        }
+    };
 
     tracing::info!("Database connection pool established");
 
@@ -157,8 +186,10 @@ pub async fn configure_environment(
             );
         }
     }
-
-    tracing::info!("Logger initialised; starting configuration of environment.");
+    // Get the environment variable, defaulting to "PROD" if not set.
+    // In prod mode the OpenAPI specification will not be mounted.
+    let environment = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "PROD".to_string());
+    tracing::info!("Logger initialised; starting configuration of {} environment.", environment);
     check_rng().unwrap_or_else(|e| {
         tracing::error!("RNG check failed: {}", e);
         panic!("OpenSSL failed to generate random bytes, environment is not secured for cryptography applications.");
@@ -247,5 +278,6 @@ pub async fn configure_environment(
         worker_threads,
         listener,
         db_pool,
+        environment
     })
 }
