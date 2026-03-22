@@ -47,7 +47,7 @@ services:
     environment:
       RUST_LOG: info
       SERVER_PORT: 9090
-      SERVER_ADDRESS: 0.0.0.0
+      SERVER_ADDRESS: 127.0.0.1
       WORKER_THREADS: 12
 
       # Database Configuration
@@ -101,14 +101,21 @@ services:
   # API Gateway (APISIX)
   # -------------------------------
   gateway:
-    image: apache/apisix:${APISIX_IMAGE_TAG:-3.9.0-debian}
+    image: apache/apisix:${APISIX_IMAGE_TAG:-3.15.0-debian}
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     container_name: api-six
     hostname: gateway.svc.docker.local
     restart: always
+
     volumes:
       - ./gateway/apisix.yaml:/usr/local/apisix/conf/apisix.yaml:ro
+      - ./gateway/config.yaml:/usr/local/apisix/conf/config.yaml:ro
     environment:
       - APISIX_STAND_ALONE=true
+      - ADMIN_KEY=edd1c9f034335f136f87ad84b625c8f1
     ports:
       - "9443:9443/tcp"  # Public gateway port
     networks:

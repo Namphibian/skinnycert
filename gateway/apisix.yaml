@@ -1,128 +1,126 @@
 # ApiSix Standalone Configuration file.
 apisix:
-    ssl:
-        enable: true
-        fallback_sni: "gateway.svc.docker.local"
+  ssl:
+    enable: true
+    fallback_sni: "gateway.svc.docker.local"
 nginx_config:
-    error_log_level: info
+  error_log_level: info
 ssls:
-    -
-        #---------------------------------------------------------------------------------------------------------------
-        # API Six Certificate for Mutual TLS
-        # Certificate files are located in the `certificate/mtls/gateway` folder.
-        # Certificates can be generated using the `gen_mtls_certs.sh` script.
-        #---------------------------------------------------------------------------------------------------------------
-        id: mtls_cert
-        cert: |
-            -----BEGIN CERTIFICATE-----
-            MIICvDCCAaQCAQEwDQYJKoZIhvcNAQELBQAwIzEMMAoGA1UECwwDd2ViMRMwEQYD
-            VQQDDApwcml2YXRlX2NhMB4XDTI0MDUxOTA1MzUwMVoXDTM0MDUxNzA1MzUwMVow
-            JTERMA8GA1UECwwIc2VjdXJpdHkxEDAOBgNVBAMMB2dhdGV3YXkwggEiMA0GCSqG
-            SIb3DQEBAQUAA4IBDwAwggEKAoIBAQDAee5rXAm4kSCNQF+PFbnFQt8Ox2bvfhg5
-            lYYM/IzcnZMfZju/UKIsGwqa9Bd/F41qUfuJti5LmLGxp8kLIo/d70wgu2e9p45f
-            E2KF7OH4mYx7sko2gqQoBLEWkfPhnrK0LuPP5S+ZnVpJYjwgjW1Ahc4CevIyxaNc
-            v8uFJcQJkyUKNnZ1jhHm1yNoR4aROhetQ0s1NnlLzJAgDft8Qkg6dizi7ifUVsqz
-            5os+7tK+kjAcLLMJ0YzCn3VDq5ZeFGm6lEbhpkm0C6GTrDivkS+eOt8+a84GqSta
-            FQA7sDIO6W/keHocw0pltFmOW9X43rLxd3dG3sXQTq0TsqbOoJuzAgMBAAEwDQYJ
-            KoZIhvcNAQELBQADggEBADFi+tFYGUJkzW4rPHrw9Y/fGFiJXS7iat0xOv8nWGO1
-            f/I9vRMXelUuEIhd7ILmkjgF/x21P47GrXIFsV+SO2cdU+/yeaUEb68h6tS68Wzq
-            x6/Bq2iTrD6m7d1vUnk1PiZWKwvxsB0HP7YiLwAdKFhqBrVDS1cemYFq7NkBJvc8
-            Rb/z6kiZztNqob6KLtr/31y4Aa3LXVpRvLC776KplXezFrEb1JoBMbkwX5UTVBKN
-            Wx4jl0ejSF/lhqXRBd0h8IsNNpvF5aoXHHFvphwmJPWGju4Ykr7dddyeaspbmVQf
-            K5/v6VtZxxej0apAVTRKlc1hHTOtWRFl+EPtRYvTyBQ=
-            -----END CERTIFICATE-----
-        key: |
-            -----BEGIN PRIVATE KEY-----
-            MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDAee5rXAm4kSCN
-            QF+PFbnFQt8Ox2bvfhg5lYYM/IzcnZMfZju/UKIsGwqa9Bd/F41qUfuJti5LmLGx
-            p8kLIo/d70wgu2e9p45fE2KF7OH4mYx7sko2gqQoBLEWkfPhnrK0LuPP5S+ZnVpJ
-            YjwgjW1Ahc4CevIyxaNcv8uFJcQJkyUKNnZ1jhHm1yNoR4aROhetQ0s1NnlLzJAg
-            Dft8Qkg6dizi7ifUVsqz5os+7tK+kjAcLLMJ0YzCn3VDq5ZeFGm6lEbhpkm0C6GT
-            rDivkS+eOt8+a84GqStaFQA7sDIO6W/keHocw0pltFmOW9X43rLxd3dG3sXQTq0T
-            sqbOoJuzAgMBAAECggEAPQpuQj3+FzpvSFyR8Z7CO3zpoJY8Xtdud1SkHpo5Uf3n
-            Gp4hdJrt027//gRLL1MY1g8J5rKQHAlg0SaU66MaXRf23KqSS+NHk39iT3bAc0a+
-            9rukLYVg6hAS2UWQQo1Bv0LfnJ7iaaUtbPhqeShg7YWBv+edx9xF4rQwpxlDAoXK
-            3RtolrzIu/ixEGHGc3YwoikqOZb53FBdQqlkK4MDdu1uGU/wi/eT5edez1n9ebQv
-            zc26G7FPsynSh2LaHO+0U1aILnmAjHrPvRTZfoAsvnuHUhKHYJiUGEfLfmIOu1Vo
-            HhpmHyCK3TuAWI1J4i1BApeVhpJ/QN86lG3ZetgzAQKBgQDUuEThfTB8QDXsN7ol
-            QSYBJDS84O/VX4CWZoCWWSswMykW22zKfSRNDc0WoZ0WhCBf6UjyW1mMP0cg9Tng
-            478b0q39o/jZv1UXAtMfIMF0omydtKOgAUDsAkIWxa43uJIij0gO9rqD9ELde0/L
-            NZ7T8hlSNzE9Iutss3ny/svz+wKBgQDno0IdhDjvaLsRojq4v9x2aGs5wA+dLpXC
-            tCY9qWgaqkVWljYoYMD6OyVrROvjAaqml22bg/UBDJa7XJE47eUnPeMwJplZBYWE
-            KYY/WtyZTOYH0ytjlkH1CQttB9+GfU+S212xlX8YDzjByfYjAmwscyRNSYTdYL6N
-            lYZgJSSxqQKBgDtnkmTeTzIDxItJLMTGotRixg+RSaju2Lwnt/VExZjaULk/YexS
-            clbKaeHOFE57a4cdYO+9rw5JhZWgph81uuMMPOa+afp1QlAAy/C/dwcZbPfFwIQo
-            lXbTUp2FaxfIhZb9KIR1RrUe+6VakHgRa1+JFqUtIKUQIWrj3ESN/2sNAoGAa9qd
-            Z0bwh7DZIZ3K/8j96vg1rP8bhhFx0+WzxJRDj97mSCnK78QVNq4hfy/pMZrODaGG
-            fJnVk3Z8HKM+Tyadw0bSqNHgJw4mG+KFyqwQ+SRQGyadFlKZRXG/qzW2Q1XHnlab
-            6pr0QYyc3cae37A6E/xM09u+jKGGOEB9//hrfHkCgYB1DIid+56KD3oVpFZhLgbC
-            ifLIRd63AWSBqOzEMsV+pUdAIJ+OhHm/fXBbskK+XZVTWcjFD6o85R1LziDxVsY6
-            wqerHM51DdDgpaLT/GVY9ESEfVGn88JnhuTgw/kcf6hVxsv96wFfnbzcVoxjVp1u
-            XUsRd0RYEgWWSJ0ie0b2aA==
-            -----END PRIVATE KEY-----
+  - #---------------------------------------------------------------------------------------------------------------
+    # API Six Certificate for Mutual TLS
+    # Certificate files are located in the `certificate/mtls/gateway` folder.
+    # Certificates can be generated using the `gen_mtls_certs.sh` script.
+    #---------------------------------------------------------------------------------------------------------------
+    id: mtls_cert
+    cert: |
+      -----BEGIN CERTIFICATE-----
+      MIICvDCCAaQCAQEwDQYJKoZIhvcNAQELBQAwIzEMMAoGA1UECwwDd2ViMRMwEQYD
+      VQQDDApwcml2YXRlX2NhMB4XDTI0MDUxOTA1MzUwMVoXDTM0MDUxNzA1MzUwMVow
+      JTERMA8GA1UECwwIc2VjdXJpdHkxEDAOBgNVBAMMB2dhdGV3YXkwggEiMA0GCSqG
+      SIb3DQEBAQUAA4IBDwAwggEKAoIBAQDAee5rXAm4kSCNQF+PFbnFQt8Ox2bvfhg5
+      lYYM/IzcnZMfZju/UKIsGwqa9Bd/F41qUfuJti5LmLGxp8kLIo/d70wgu2e9p45f
+      E2KF7OH4mYx7sko2gqQoBLEWkfPhnrK0LuPP5S+ZnVpJYjwgjW1Ahc4CevIyxaNc
+      v8uFJcQJkyUKNnZ1jhHm1yNoR4aROhetQ0s1NnlLzJAgDft8Qkg6dizi7ifUVsqz
+      5os+7tK+kjAcLLMJ0YzCn3VDq5ZeFGm6lEbhpkm0C6GTrDivkS+eOt8+a84GqSta
+      FQA7sDIO6W/keHocw0pltFmOW9X43rLxd3dG3sXQTq0TsqbOoJuzAgMBAAEwDQYJ
+      KoZIhvcNAQELBQADggEBADFi+tFYGUJkzW4rPHrw9Y/fGFiJXS7iat0xOv8nWGO1
+      f/I9vRMXelUuEIhd7ILmkjgF/x21P47GrXIFsV+SO2cdU+/yeaUEb68h6tS68Wzq
+      x6/Bq2iTrD6m7d1vUnk1PiZWKwvxsB0HP7YiLwAdKFhqBrVDS1cemYFq7NkBJvc8
+      Rb/z6kiZztNqob6KLtr/31y4Aa3LXVpRvLC776KplXezFrEb1JoBMbkwX5UTVBKN
+      Wx4jl0ejSF/lhqXRBd0h8IsNNpvF5aoXHHFvphwmJPWGju4Ykr7dddyeaspbmVQf
+      K5/v6VtZxxej0apAVTRKlc1hHTOtWRFl+EPtRYvTyBQ=
+      -----END CERTIFICATE-----
+    key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDAee5rXAm4kSCN
+      QF+PFbnFQt8Ox2bvfhg5lYYM/IzcnZMfZju/UKIsGwqa9Bd/F41qUfuJti5LmLGx
+      p8kLIo/d70wgu2e9p45fE2KF7OH4mYx7sko2gqQoBLEWkfPhnrK0LuPP5S+ZnVpJ
+      YjwgjW1Ahc4CevIyxaNcv8uFJcQJkyUKNnZ1jhHm1yNoR4aROhetQ0s1NnlLzJAg
+      Dft8Qkg6dizi7ifUVsqz5os+7tK+kjAcLLMJ0YzCn3VDq5ZeFGm6lEbhpkm0C6GT
+      rDivkS+eOt8+a84GqStaFQA7sDIO6W/keHocw0pltFmOW9X43rLxd3dG3sXQTq0T
+      sqbOoJuzAgMBAAECggEAPQpuQj3+FzpvSFyR8Z7CO3zpoJY8Xtdud1SkHpo5Uf3n
+      Gp4hdJrt027//gRLL1MY1g8J5rKQHAlg0SaU66MaXRf23KqSS+NHk39iT3bAc0a+
+      9rukLYVg6hAS2UWQQo1Bv0LfnJ7iaaUtbPhqeShg7YWBv+edx9xF4rQwpxlDAoXK
+      3RtolrzIu/ixEGHGc3YwoikqOZb53FBdQqlkK4MDdu1uGU/wi/eT5edez1n9ebQv
+      zc26G7FPsynSh2LaHO+0U1aILnmAjHrPvRTZfoAsvnuHUhKHYJiUGEfLfmIOu1Vo
+      HhpmHyCK3TuAWI1J4i1BApeVhpJ/QN86lG3ZetgzAQKBgQDUuEThfTB8QDXsN7ol
+      QSYBJDS84O/VX4CWZoCWWSswMykW22zKfSRNDc0WoZ0WhCBf6UjyW1mMP0cg9Tng
+      478b0q39o/jZv1UXAtMfIMF0omydtKOgAUDsAkIWxa43uJIij0gO9rqD9ELde0/L
+      NZ7T8hlSNzE9Iutss3ny/svz+wKBgQDno0IdhDjvaLsRojq4v9x2aGs5wA+dLpXC
+      tCY9qWgaqkVWljYoYMD6OyVrROvjAaqml22bg/UBDJa7XJE47eUnPeMwJplZBYWE
+      KYY/WtyZTOYH0ytjlkH1CQttB9+GfU+S212xlX8YDzjByfYjAmwscyRNSYTdYL6N
+      lYZgJSSxqQKBgDtnkmTeTzIDxItJLMTGotRixg+RSaju2Lwnt/VExZjaULk/YexS
+      clbKaeHOFE57a4cdYO+9rw5JhZWgph81uuMMPOa+afp1QlAAy/C/dwcZbPfFwIQo
+      lXbTUp2FaxfIhZb9KIR1RrUe+6VakHgRa1+JFqUtIKUQIWrj3ESN/2sNAoGAa9qd
+      Z0bwh7DZIZ3K/8j96vg1rP8bhhFx0+WzxJRDj97mSCnK78QVNq4hfy/pMZrODaGG
+      fJnVk3Z8HKM+Tyadw0bSqNHgJw4mG+KFyqwQ+SRQGyadFlKZRXG/qzW2Q1XHnlab
+      6pr0QYyc3cae37A6E/xM09u+jKGGOEB9//hrfHkCgYB1DIid+56KD3oVpFZhLgbC
+      ifLIRd63AWSBqOzEMsV+pUdAIJ+OhHm/fXBbskK+XZVTWcjFD6o85R1LziDxVsY6
+      wqerHM51DdDgpaLT/GVY9ESEfVGn88JnhuTgw/kcf6hVxsv96wFfnbzcVoxjVp1u
+      XUsRd0RYEgWWSJ0ie0b2aA==
+      -----END PRIVATE KEY-----
 
-        type: client
-    -
-        #---------------------------------------------------------------------------------------------------------------
-        # SSL Certificate for API Six Client Communication
-        # This SSL certificate is used for communication between API Six and the client.
-        # It is a server certificate that corresponds to the SNI (Server Name Indication) specified in the configuration YAML file (see the `snis` element).
-        # Certificate files are located in the `legacy_certificates/tls/gateway` folder.
-        # Generate these legacy_certificates using the `gen_tls_cert.sh` script.
-        #---------------------------------------------------------------------------------------------------------------
-        id: ssl_server_certificate
-        cert: |
-            -----BEGIN CERTIFICATE-----
-            MIICrDCCAZQCFF7k+ZV99xoBsHLEpDPMq2hk7GauMA0GCSqGSIb3DQEBCwUAMBEx
-            DzANBgNVBAMMBlJPT1RDQTAgFw0yNDA2MDEwOTUwMjZaGA8yMTI0MDUwODA5NTAy
-            NlowEjEQMA4GA1UEAwwHZ2F0ZXdheTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
-            AQoCggEBAN38nOLwsclAjK5Akm6nWZ98d8lnsr+7rpKV2JQszHSAXgFxG5qvkuI3
-            8hpdyNdPW+x7TNXHNRn5dR5JWj6g4k3FWB3SOF2a4aM1OcARWYNuWQpkCndVyncC
-            wuXWSQ+narJh9wYlaZn6QLFSoIPv5TzXk/TCz3pSb5C7nvaDI2S3xar1sMarPIcD
-            OMHoGs6Q+INZFrBkaCRk4/TQiyzDE8PybBn7r9VW5NyRdwb0xVN3WsVl8GSJPhr3
-            XyNSWcfxfJBpf7prZtAyKgn9AYIFF2nJOALtmX1eUspcq76pAp1J1h/+BvEaujDG
-            bzdW1Pq6ly+R2W4JJoeK23qfnkpACPECAwEAATANBgkqhkiG9w0BAQsFAAOCAQEA
-            Tcb56tzEV3335jZEJC2FeYbYrg/Arx5Iw6u2XSrFHla1hPnz647lhB4PWVLrYb5R
-            U9zTttorRNYtliO3o6YZ2YegP9ei/Jy/Q7ycCoDaAppTmB9jToxbzRqOaPaCK1xh
-            EXKDv8hcZSz/l0MjuvdzGWCDVNkzh6m7lBKGTn271ChJxpDE6ju4KqFRO5gKNLL1
-            HLSaxLdkMfFJIW7mp2AtUiKIARXRiTR01Ux9JklBA2pXbe6b5MdKxNXgSvPWl1LV
-            ygLe6UeQSSyrIBr/LVcJQ589im1syJna8ZBmG6deyNqnm+m28YEUqOkNO7XWQP4G
-            uVT1/rVZaJMlVlxNYr5mbw==
-            -----END CERTIFICATE-----
+    type: client
+  - #---------------------------------------------------------------------------------------------------------------
+    # SSL Certificate for API Six Client Communication
+    # This SSL certificate is used for communication between API Six and the client.
+    # It is a server certificate that corresponds to the SNI (Server Name Indication) specified in the configuration YAML file (see the `snis` element).
+    # Certificate files are located in the `legacy_certificates/tls/gateway` folder.
+    # Generate these legacy_certificates using the `gen_tls_cert.sh` script.
+    #---------------------------------------------------------------------------------------------------------------
+    id: ssl_server_certificate
+    cert: |
+      -----BEGIN CERTIFICATE-----
+      MIICrDCCAZQCFF7k+ZV99xoBsHLEpDPMq2hk7GauMA0GCSqGSIb3DQEBCwUAMBEx
+      DzANBgNVBAMMBlJPT1RDQTAgFw0yNDA2MDEwOTUwMjZaGA8yMTI0MDUwODA5NTAy
+      NlowEjEQMA4GA1UEAwwHZ2F0ZXdheTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCC
+      AQoCggEBAN38nOLwsclAjK5Akm6nWZ98d8lnsr+7rpKV2JQszHSAXgFxG5qvkuI3
+      8hpdyNdPW+x7TNXHNRn5dR5JWj6g4k3FWB3SOF2a4aM1OcARWYNuWQpkCndVyncC
+      wuXWSQ+narJh9wYlaZn6QLFSoIPv5TzXk/TCz3pSb5C7nvaDI2S3xar1sMarPIcD
+      OMHoGs6Q+INZFrBkaCRk4/TQiyzDE8PybBn7r9VW5NyRdwb0xVN3WsVl8GSJPhr3
+      XyNSWcfxfJBpf7prZtAyKgn9AYIFF2nJOALtmX1eUspcq76pAp1J1h/+BvEaujDG
+      bzdW1Pq6ly+R2W4JJoeK23qfnkpACPECAwEAATANBgkqhkiG9w0BAQsFAAOCAQEA
+      Tcb56tzEV3335jZEJC2FeYbYrg/Arx5Iw6u2XSrFHla1hPnz647lhB4PWVLrYb5R
+      U9zTttorRNYtliO3o6YZ2YegP9ei/Jy/Q7ycCoDaAppTmB9jToxbzRqOaPaCK1xh
+      EXKDv8hcZSz/l0MjuvdzGWCDVNkzh6m7lBKGTn271ChJxpDE6ju4KqFRO5gKNLL1
+      HLSaxLdkMfFJIW7mp2AtUiKIARXRiTR01Ux9JklBA2pXbe6b5MdKxNXgSvPWl1LV
+      ygLe6UeQSSyrIBr/LVcJQ589im1syJna8ZBmG6deyNqnm+m28YEUqOkNO7XWQP4G
+      uVT1/rVZaJMlVlxNYr5mbw==
+      -----END CERTIFICATE-----
 
-        key: |
-            -----BEGIN PRIVATE KEY-----
-            MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDd/Jzi8LHJQIyu
-            QJJup1mffHfJZ7K/u66SldiULMx0gF4BcRuar5LiN/IaXcjXT1vse0zVxzUZ+XUe
-            SVo+oOJNxVgd0jhdmuGjNTnAEVmDblkKZAp3Vcp3AsLl1kkPp2qyYfcGJWmZ+kCx
-            UqCD7+U815P0ws96Um+Qu572gyNkt8Wq9bDGqzyHAzjB6BrOkPiDWRawZGgkZOP0
-            0IsswxPD8mwZ+6/VVuTckXcG9MVTd1rFZfBkiT4a918jUlnH8XyQaX+6a2bQMioJ
-            /QGCBRdpyTgC7Zl9XlLKXKu+qQKdSdYf/gbxGrowxm83VtT6upcvkdluCSaHitt6
-            n55KQAjxAgMBAAECggEAAlUU0txYjIW0KrzLvtlaTeObswiQjmeDysxxOoCGtN/8
-            wde+Qak7qAau5hIQlkg7wJMgOm4/7BdozLi1SkAN3c235Kvfv2FcR5gWdWyZ9Aja
-            ay18Ttf2n8YE8VHL5orfGfBwI/O5en7ciNXBAvifZoEYMUV9CE9RPqINOMOz9y9/
-            ysVkTdqF2sWfDsM6cTj1lab2spgUckOQftEShWTIhmTOnCN8x4l66t1sryLXSajl
-            pfEyOE++fk0Xn/otucr4CsTHY/rw4MSkXg/lrJJkfbRYB5nahORWEacg5AYrtFzr
-            LUoHEXNxAyG0MxVrwbcY/7mg6Sc8hIkxdjfWjG4TqQKBgQDkxJmvKsme88sjDgn2
-            Us5sNB51YvtrsgqevlfBX8Zb1i/EJuwIrC2KzJC+VY1wJVm6PtTAIhJctsKlXMVe
-            szhNj7+gPErDtOyKEz+VW93F2DVq7ht663YNTVaNEQR8qiPHxUBHZ0eWdoA6VBua
-            dVPQbZUJxt7dMcujqm3RSImgywKBgQD4aV1KvfFjbSUyECUTk9Ny914XgufDzuWx
-            7bKJXgJM9qrFE3G55dBik3g0ubW2OALAqn1Mx9byYJvxaNG/KRYoOfFtVHKKGU1l
-            /DGIXLkGapXREUdPRMmkmiwnQVDh776THD9PG4FsZm6CKBPauXrq4urHYaUyEl8/
-            9qQOq8FxswKBgQDDS8MXcyOkeuPUDUwb6R0n6maGN/YDPn8qfbxU7PpdtEAa6E9g
-            J/zJHVID6u1P69Lp2HGvhGbAl5UbrlMgQUezjyA8HryEzpOQXFZPn5l4KNeRbaww
-            B4tEV92nl/uIoYbiKFZznovSu19EbEEUX00qBiLRseDYXIZINlqB67byeQKBgEsj
-            G5vS7iOjzN9isMRGL2wT1HsKFm5Ms39pJVqVe96psaegpQKUt75JWs+f6I2wTWzX
-            ZMUHoUV44VJY4TCQDeqm9Bact3R8CMQzTwwu96wwKxaswkQAy3klRPuurvdYG+3F
-            WoTkDfaq2Pw3gSHkfoBzmI4sQ9psYjEnuiHR49YvAoGAYgM2LphcJHfoQE/XglMi
-            f9GgLESx/0FqqHX5CHCkB7t28LKYSUicXy1sjzc6E50HeDQ1eKy5Fadhdjo9uPX9
-            Eobvgcj91LTnAEvcX31vAUabRGhCABblPyOHTvypsKBdEw0FDKySdxnPQzL6xx8Q
-            hMxcAmq4TQQRaSYvIdOiVkg=
-            -----END PRIVATE KEY-----
-        ssl_protocols:
-            - TLSv1.3
-        snis:
-            - gateway.svc.docker.local
+    key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDd/Jzi8LHJQIyu
+      QJJup1mffHfJZ7K/u66SldiULMx0gF4BcRuar5LiN/IaXcjXT1vse0zVxzUZ+XUe
+      SVo+oOJNxVgd0jhdmuGjNTnAEVmDblkKZAp3Vcp3AsLl1kkPp2qyYfcGJWmZ+kCx
+      UqCD7+U815P0ws96Um+Qu572gyNkt8Wq9bDGqzyHAzjB6BrOkPiDWRawZGgkZOP0
+      0IsswxPD8mwZ+6/VVuTckXcG9MVTd1rFZfBkiT4a918jUlnH8XyQaX+6a2bQMioJ
+      /QGCBRdpyTgC7Zl9XlLKXKu+qQKdSdYf/gbxGrowxm83VtT6upcvkdluCSaHitt6
+      n55KQAjxAgMBAAECggEAAlUU0txYjIW0KrzLvtlaTeObswiQjmeDysxxOoCGtN/8
+      wde+Qak7qAau5hIQlkg7wJMgOm4/7BdozLi1SkAN3c235Kvfv2FcR5gWdWyZ9Aja
+      ay18Ttf2n8YE8VHL5orfGfBwI/O5en7ciNXBAvifZoEYMUV9CE9RPqINOMOz9y9/
+      ysVkTdqF2sWfDsM6cTj1lab2spgUckOQftEShWTIhmTOnCN8x4l66t1sryLXSajl
+      pfEyOE++fk0Xn/otucr4CsTHY/rw4MSkXg/lrJJkfbRYB5nahORWEacg5AYrtFzr
+      LUoHEXNxAyG0MxVrwbcY/7mg6Sc8hIkxdjfWjG4TqQKBgQDkxJmvKsme88sjDgn2
+      Us5sNB51YvtrsgqevlfBX8Zb1i/EJuwIrC2KzJC+VY1wJVm6PtTAIhJctsKlXMVe
+      szhNj7+gPErDtOyKEz+VW93F2DVq7ht663YNTVaNEQR8qiPHxUBHZ0eWdoA6VBua
+      dVPQbZUJxt7dMcujqm3RSImgywKBgQD4aV1KvfFjbSUyECUTk9Ny914XgufDzuWx
+      7bKJXgJM9qrFE3G55dBik3g0ubW2OALAqn1Mx9byYJvxaNG/KRYoOfFtVHKKGU1l
+      /DGIXLkGapXREUdPRMmkmiwnQVDh776THD9PG4FsZm6CKBPauXrq4urHYaUyEl8/
+      9qQOq8FxswKBgQDDS8MXcyOkeuPUDUwb6R0n6maGN/YDPn8qfbxU7PpdtEAa6E9g
+      J/zJHVID6u1P69Lp2HGvhGbAl5UbrlMgQUezjyA8HryEzpOQXFZPn5l4KNeRbaww
+      B4tEV92nl/uIoYbiKFZznovSu19EbEEUX00qBiLRseDYXIZINlqB67byeQKBgEsj
+      G5vS7iOjzN9isMRGL2wT1HsKFm5Ms39pJVqVe96psaegpQKUt75JWs+f6I2wTWzX
+      ZMUHoUV44VJY4TCQDeqm9Bact3R8CMQzTwwu96wwKxaswkQAy3klRPuurvdYG+3F
+      WoTkDfaq2Pw3gSHkfoBzmI4sQ9psYjEnuiHR49YvAoGAYgM2LphcJHfoQE/XglMi
+      f9GgLESx/0FqqHX5CHCkB7t28LKYSUicXy1sjzc6E50HeDQ1eKy5Fadhdjo9uPX9
+      Eobvgcj91LTnAEvcX31vAUabRGhCABblPyOHTvypsKBdEw0FDKySdxnPQzL6xx8Q
+      hMxcAmq4TQQRaSYvIdOiVkg=
+      -----END PRIVATE KEY-----
+    ssl_protocols:
+      - TLSv1.3
+    snis:
+      - gateway.svc.docker.local
 #-----------------------------------------------------------------------------------------------------------------------
 # Global Rules Definition
 # Applies to all consumers, routes, and upstream configurations.
@@ -131,26 +129,26 @@ ssls:
 # Adds a `nosniff` header for enhanced security.
 #---------------------------------------------------------------------------------------------------------------
 global_rules:
-    - id: 1
-      plugins:
-          response-rewrite:
-              headers:
-                  set:
-                      X-Content-Type-Options: nosniff
-                      Content-Type: application/json
-                  remove:
-                      - Server
+  - id: 1
+    plugins:
+      response-rewrite:
+        headers:
+          set:
+            X-Content-Type-Options: nosniff
+            Content-Type: application/json
+          remove:
+            - Server
 #---------------------------------------------------------------------------------------------------------------
 # Consumer Definitions for the API
 # Defines various consumers for the API.
 # Currently unused.
 #---------------------------------------------------------------------------------------------------------------
-# consumers:
-#     - username: note
-#       plugins:
-#           basic-auth:
-#               username: note
-#               password: note
+consumers:
+  - username: public
+    plugins:
+      basic-auth:
+        username: public
+        password: public
 #     - username: health
 #       plugins:
 #           basic-auth:
@@ -162,46 +160,42 @@ global_rules:
 # Maps ApiSix paths to corresponding service and upstream paths.
 #---------------------------------------------------------------------------------------------------------------
 routes:
-    -
-        uri: /health
-        methods: ["GET", "POST"]
-        service_id: 1
-    -
-        uri: /keys
-        methods: ["GET"]
-        service_id: 1
-    -
-        uri: /keys/*
-        methods: ["GET"]
-        service_id: 1
-    -
-        uri: /certificates
-        methods: ["GET", "POST"]
-        service_id: 1
-    -
-        uri: /certificates/*
-        methods: ["GET", "PATCH", "DELETE", "PUT"]
-        service_id: 1
-    -
-        uri: /key_types
-        methods: ["GET"]
-        service_id: 1
-    -
-        uri: /key_statuses
-        methods: ["GET"]
-        service_id: 1
-    -
-        uri: /key_type_tls_statuses
-        methods: ["GET"]
-        service_id: 1
-    -
-        uri: /swagger-ui/*
-        methods: ["GET"]
-        service_id: 1
-    -
-        uri: /api-docs/openapi.json
-        methods: ["GET"]
-        service_id: 1
+  - uri: /health
+    methods: [ "GET", "POST" ]
+    service_id: 1
+  - uri: /keys
+    methods: [ "GET" ]
+    service_id: 1
+    plugins:
+      basic-auth: { }
+      consumer-restriction:
+        rejected_msg: "Only users with the health permissions can view this."
+        whitelist:
+          - public
+  - uri: /keys/*
+    methods: [ "GET" ]
+    service_id: 1
+  - uri: /certificates
+    methods: [ "GET", "POST" ]
+    service_id: 1
+  - uri: /certificates/*
+    methods: [ "GET", "PATCH", "DELETE", "PUT" ]
+    service_id: 1
+  - uri: /key_types
+    methods: [ "GET" ]
+    service_id: 1
+  - uri: /key_statuses
+    methods: [ "GET" ]
+    service_id: 1
+  - uri: /key_type_tls_statuses
+    methods: [ "GET" ]
+    service_id: 1
+  - uri: /swagger-ui/*
+    methods: [ "GET" ]
+    service_id: 1
+  - uri: /api-docs/openapi.json
+    methods: [ "GET" ]
+    service_id: 1
 #---------------------------------------------------------------------------------------------------------------
 # Service Definition to Upstream (Rust API)
 # Defines a service that connects to the upstream Rust API.
@@ -209,37 +203,35 @@ routes:
 # Example: x_request_id:a70931f6-509f-443e-9e76-3ab02d08b0bd
 #---------------------------------------------------------------------------------------------------------------
 services:
-    -
-        id: 1
-        upstream_id: 1
-        plugins:
-            request-id: {}
+  - id: 1
+    upstream_id: 1
+    plugins:
+      request-id: { }
 #---------------------------------------------------------------------------------------------------------------
 # Upstream Definition for Rust API
 # Specifies how to communicate with the Rust API.
 # Uses the HTTPS scheme with mutual TLS (mTLS) by defining the `tls` element.
 #---------------------------------------------------------------------------------------------------------------
 upstreams:
-    -
-        id: 1
-        nodes:
-            "api.svc.docker.local:8443": 1
-        type: roundrobin
-        scheme: https
-        pass_host: rewrite
-        upstream_host: api.svc.docker.local
-        tls:
-            client_cert_id: mtls_cert
+  - id: 1
+    nodes:
+      "api.svc.docker.local:8443": 1
+    type: roundrobin
+    scheme: https
+    pass_host: rewrite
+    upstream_host: api.svc.docker.local
+    tls:
+      client_cert_id: mtls_cert
 #---------------------------------------------------------------------------------------------------------------
 # plugins listed here will be hot reloaded and override the boot configuration
 #---------------------------------------------------------------------------------------------------------------
 plugins:
-    - name: request-id
-    - name: basic-auth
-    - name: consumer-restriction
-    - name: mocking
-    - name: response-rewrite
-    - name: file-logger
+  - name: request-id
+  - name: basic-auth
+  - name: consumer-restriction
+  - name: mocking
+  - name: response-rewrite
+  - name: file-logger
 
 
 #END
