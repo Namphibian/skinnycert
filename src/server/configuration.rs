@@ -1,13 +1,12 @@
 mod database;
 mod network;
 mod security;
+pub mod telemetry;
 
-use crate::server::telemetry::init_subscriber;
+use telemetry::init_subscriber;
 use crate::server::models::key_algorithms::seed::seed_all_algorithms;
 use dotenvy::dotenv;
-use openssl::rand::rand_bytes;
-use sqlx::postgres::{PgPool, PgPoolOptions};
-use std::fmt;
+use sqlx::postgres::{PgPool};
 use std::io::Stdout;
 use std::net::{IpAddr, Ipv4Addr, TcpListener};
 use std::thread::available_parallelism;

@@ -1,6 +1,5 @@
 mod common;
 use common::spawn_app;
-use serde::Deserialize;
 use skinnycert::server::routes::keys::dto::KeyAlgorithmResponse;
 
 #[tokio::test]

@@ -69,7 +69,7 @@ async fn put_certificates_test() {
         .expect("Failed to execute request.");
     let status = response.status();
     let content_length = response.content_length().unwrap_or(0);
-
+    assert_eq!(content_length, 0);
     // Now consume the response to get the text body
     let response_text = response.text().await.unwrap();
     print!("Response: {}", response_text);
@@ -197,7 +197,7 @@ fn test_patch_validate_invalid_pubkey() {
 #[test]
 fn test_patch_validate_broken_chain() {
     let (root_ca, root_key) = create_test_cert("Root CA", None, true);
-    let (other_root, other_key) = create_test_cert("Other Root", None, true);
+    let (other_root, _) = create_test_cert("Other Root", None, true);
     let (leaf_cert, _) = create_test_cert("Leaf", Some((&root_ca, &root_key)), false);
 
     let leaf_pem = String::from_utf8(leaf_cert.to_pem().unwrap()).unwrap();

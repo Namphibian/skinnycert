@@ -1,4 +1,4 @@
-use crate::server::telemetry::SkinnycertRouteSpanBuilder;
+use crate::server::configuration::telemetry::SkinnycertRouteSpanBuilder;
 use crate::server::api_doc::ApiDoc;
 use crate::server::routes::certificates::configure_certificate_route;
 use crate::server::routes::health_check::configure_health_check;

@@ -5,7 +5,6 @@ mod common_helpers;
 use common::spawn_app;
 use common_helpers::{create_n_certificates_via_api, };
 use reqwest::Client;
-use sqlx::Encode;
 use urlencoding::encode;
 use crate::common_helpers::fetch_first_key_algorithm_id;
 
