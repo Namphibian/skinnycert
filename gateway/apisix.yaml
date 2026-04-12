@@ -141,7 +141,6 @@ global_rules:
 #---------------------------------------------------------------------------------------------------------------
 # Consumer Definitions for the API
 # Defines various consumers for the API.
-# Currently unused.
 #---------------------------------------------------------------------------------------------------------------
 consumers:
   - username: public
@@ -169,7 +168,7 @@ routes:
     plugins:
       basic-auth: { }
       consumer-restriction:
-        rejected_msg: "Only users with the health permissions can view this."
+        rejected_msg: "Only authorized users can view this."
         whitelist:
           - public
   - uri: /keys/*
