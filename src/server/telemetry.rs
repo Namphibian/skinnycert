@@ -28,7 +28,7 @@ impl RootSpanBuilder for SkinnycertRouteSpanBuilder {
     }
 }
 
-pub fn configure_bunyan_logger_format() -> BunyanFormattingLayer<fn() -> Stdout> {
+pub fn init_subscriber() -> BunyanFormattingLayer<fn() -> Stdout> {
     return BunyanFormattingLayer::new(
         "skinnycert".into(),
         // Output the formatted spans to stdout.

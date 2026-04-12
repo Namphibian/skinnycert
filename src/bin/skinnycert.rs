@@ -1,6 +1,8 @@
 use clap::Parser;
-use skinnycert::server::app::run;
-use skinnycert::server::config::{configure_environment, ServerListeningAddress, ServerPort};
+use skinnycert::server::configuration::{
+    configure_environment, ServerListeningAddress, ServerPort,
+};
+use skinnycert::server::startup::run;
 use std::net::IpAddr;
 
 #[derive(Parser, Debug)]
@@ -17,6 +19,9 @@ struct Cli {
     /// Number of worker threads
     #[arg(short, long)]
     workers: Option<u16>,
+
+    #[arg(short, long)]
+    environment: Option<String>,
 }
 
 #[tokio::main]
@@ -42,8 +47,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    let run_environment: Option<String> = cli
+        .environment
+        .or_else(|| std::env::var("ENVIRONMENT").ok());
+
     // Configure environment with all parameters
-    let config = match configure_environment(server_address, server_port, cli.workers).await {
+    let config = match configure_environment(
+        server_address,
+        server_port,
+        cli.workers,
+        run_environment,
+    )
+    .await
+    {
         Ok(cfg) => cfg,
         Err(e) => {
             eprintln!("Configuration error: {}", e);
@@ -52,7 +68,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Run the server using the pre-bound listener
-    run(config.listener, config.worker_threads, config.db_pool, config.environment)?.await?;
+    run(
+        config.listener,
+        config.worker_threads,
+        config.db_pool,
+        config.environment,
+    )?
+    .await?;
 
     Ok(())
 }

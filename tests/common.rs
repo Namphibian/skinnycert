@@ -1,5 +1,8 @@
-use skinnycert::server::config::{configure_environment, ServerListeningAddress, ServerPort};
+use skinnycert::server::configuration::{
+    configure_environment, ServerListeningAddress, ServerPort,
+};
 use std::net::{IpAddr, Ipv4Addr};
+use std::thread::available_parallelism;
 
 /// Spawns a new instance of the Skinnycert application bound to an ephemeral port.
 ///
@@ -19,10 +22,13 @@ use std::net::{IpAddr, Ipv4Addr};
 /// continue executing requests against it.
 pub async fn spawn_app() -> String {
     // Configure the server with localhost and a dynamic (ephemeral) port.
+    let num_cpus = available_parallelism().unwrap().get().to_string();
+    let env = Some("dev".to_string());
     let config = match configure_environment(
         ServerListeningAddress::Is(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
         ServerPort::Is(0), // 0 tells the OS to assign a random free port
-        8.into(),
+        num_cpus.parse::<u16>().unwrap_or(8).into(),
+        env,
     )
     .await
     {
@@ -34,7 +40,7 @@ pub async fn spawn_app() -> String {
     };
 
     // Launch the Actix system server asynchronously.
-    let server = skinnycert::server::app::run(
+    let server = skinnycert::server::startup::run(
         config.listener,
         config.worker_threads,
         config.db_pool,

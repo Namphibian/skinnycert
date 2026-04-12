@@ -1,5 +1,5 @@
-use crate::server::logger::SkinnycertRouteSpanBuilder;
-use crate::server::openapi::ApiDoc;
+use crate::server::telemetry::SkinnycertRouteSpanBuilder;
+use crate::server::api_doc::ApiDoc;
 use crate::server::routes::certificates::configure_certificate_route;
 use crate::server::routes::health_check::configure_health_check;
 use crate::server::routes::key_statuses::configure_key_algorithm_status_routes;

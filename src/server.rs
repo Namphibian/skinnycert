@@ -1,7 +1,9 @@
-pub mod app;
+pub mod startup;
 pub mod config;
-mod logger;
+mod telemetry;
 pub mod models;
 pub mod routes;
-pub mod macros;
-pub mod openapi;
+pub mod api_doc;
+pub mod shared;
+pub mod configuration;
+

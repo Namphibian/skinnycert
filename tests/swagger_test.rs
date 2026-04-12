@@ -1,20 +1,20 @@
-use skinnycert::server::config::{configure_environment, ServerListeningAddress, ServerPort};
+use skinnycert::server::configuration::{configure_environment, ServerListeningAddress, ServerPort};
 use std::net::{IpAddr, Ipv4Addr};
 use reqwest;
 
 async fn spawn_app_with_env(env: &str) -> String {
-    unsafe {
-        std::env::set_var("ENVIRONMENT", env);
-    }
+    let env = Some(env.into());
+
     let config = configure_environment(
         ServerListeningAddress::Is(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))),
         ServerPort::Is(0),
         Some(1),
+        env,
     )
     .await
     .expect("Failed to configure environment");
 
-    let server = skinnycert::server::app::run(
+    let server = skinnycert::server::startup::run(
         config.listener,
         config.worker_threads,
         config.db_pool,
