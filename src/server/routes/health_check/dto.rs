@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Represents the JSON payload returned by the `/health` endpoint.
@@ -10,7 +10,9 @@ use utoipa::ToSchema;
 /// ```json
 /// {
 ///   "memory_info": {
+///     "total_memory_kb": 16000000,
 ///     "free_memory_kb": 1823920,
+///     "available_memory_kb": 12000000,
 ///     "process_memory_kb": 48212
 ///   }
 /// }
@@ -18,7 +20,7 @@ use utoipa::ToSchema;
 ///
 /// This structure is serialized automatically by Actix Web when returned
 /// with `HttpResponse::Ok().json(HealthCheckResponse { ... })`.
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct HealthCheckResponse {
     /// Contains system and process memory metrics.
@@ -30,13 +32,21 @@ pub struct HealthCheckResponse {
 /// This struct is nested inside [`HealthCheckResponse`] and provides
 /// low-level runtime information useful for diagnostics, monitoring,
 /// and container health checks.
-#[derive(Serialize, ToSchema)]
+#[derive(Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MemoryInfo {
-    /// Amount of free system memory (RAM) available, in kilobytes.
+    /// Total amount of physical RAM, in kilobytes.
+    pub total_memory_kb: u64,
+
+    /// Amount of free system memory (RAM) that is completely unused, in kilobytes.
     ///
     /// This value is parsed from `/proc/meminfo` → `MemFree`.
     pub free_memory_kb: u64,
+
+    /// Amount of system memory (RAM) available for starting new applications, in kilobytes.
+    ///
+    /// This value is parsed from `/proc/meminfo` → `MemAvailable`.
+    pub available_memory_kb: u64,
 
     /// Memory currently used by this process (resident set size), in kilobytes.
     ///

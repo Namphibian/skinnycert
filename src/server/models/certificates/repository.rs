@@ -177,6 +177,7 @@ impl CertificateRepository {
 
         let direction = params.direction.unwrap_or(PageDirection::Next);
 
+        let mut has_more_in_direction = false;
         let results = match direction {
             PageDirection::Next => {
                 // Fetch newest-first (DESC). Request limit+1 to detect if there are more items.
@@ -247,6 +248,7 @@ impl CertificateRepository {
 
                 // If we fetched more than `limit`, drop the extra row (it only indicates "has more")
                 if rows.len() as i64 > limit {
+                    has_more_in_direction = true;
                     rows.pop(); // extra row is the last element (oldest) for DESC ordering
                 }
                 rows
@@ -320,37 +322,52 @@ impl CertificateRepository {
                 .await
                 .map_err(map_sqlx_error)?;
 
+                if rows.len() as i64 > limit {
+                    has_more_in_direction = true;
+                    rows.pop(); // Remove the extra row which is the farthest in the ASC direction (newest)
+                }
+
                 // Reverse to restore global newest‑first order
                 rows.reverse();
-
-                // If we fetched more than `limit`, drop the extra row (it will be the last element after reverse)
-                if rows.len() as i64 > limit {
-                    rows.pop();
-                }
 
                 rows
             }
         };
 
-        // After trimming the extra row above, results.len() == limit indicates "may have more"
-        let has_more = results.len() as i64 == limit;
-
-        // next_page_token: only present if there may be more items after this page
-        let next_page_token = if has_more {
+        // next_page_token: only present if there are more items in the 'Next' (older) direction.
+        let next_page_token = if direction == PageDirection::Next {
+            if has_more_in_direction {
+                results
+                    .last()
+                    .map(|cert| encode_cursor(cert.created_on, cert.id))
+            } else {
+                None
+            }
+        } else {
+            // direction == Prev. We know there's at least the item we started from in the 'Next' direction.
             results
                 .last()
                 .map(|cert| encode_cursor(cert.created_on, cert.id))
-        } else {
-            None
         };
 
-        // prev_page_token: only present if the request included a cursor (i.e., this page was produced from a cursor)
-        let prev_page_token = if has_cursor {
-            results
-                .first()
-                .map(|cert| encode_cursor(cert.created_on, cert.id))
+        // prev_page_token: only present if there are more items in the 'Prev' (newer) direction.
+        let prev_page_token = if direction == PageDirection::Prev {
+            if has_more_in_direction {
+                results
+                    .first()
+                    .map(|cert| encode_cursor(cert.created_on, cert.id))
+            } else {
+                None
+            }
         } else {
-            None
+            // direction == Next. If we have a cursor, we know there's something in 'Prev' direction.
+            if has_cursor {
+                results
+                    .first()
+                    .map(|cert| encode_cursor(cert.created_on, cert.id))
+            } else {
+                None
+            }
         };
 
         Ok(PagedResult {

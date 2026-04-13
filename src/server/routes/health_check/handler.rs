@@ -6,7 +6,9 @@ use std::fs;
 ///
 /// This endpoint performs a basic health check of the running process
 /// by returning information about:
+/// - **Total system memory (KB)**
 /// - **Free system memory (KB)**
+/// - **Available system memory (KB)**
 /// - **Memory used by the current process (KB)**
 ///
 /// It returns a JSON payload of type [`HealthCheckResponse`], which wraps
@@ -16,7 +18,9 @@ use std::fs;
 /// ```json
 /// {
 ///   "memory_info": {
+///     "total_memory_kb": 16000000,
 ///     "free_memory_kb": 1823920,
+///     "available_memory_kb": 12000000,
 ///     "process_memory_kb": 48212
 ///   }
 /// }
@@ -38,15 +42,17 @@ use std::fs;
 )]
 #[tracing::instrument(name = "Healthcheck GET Request.")]
 pub async fn get_health() -> impl Responder {
-    // --- Free system memory ---
-    let free_memory_kb = get_free_memory();
+    // --- System memory info ---
+    let (total_kb, free_kb, available_kb) = get_system_memory();
 
     // --- Current process memory usage ---
     let process_memory_kb = get_process_memory();
 
     // Build the response structure
     let mem_info = MemoryInfo {
-        free_memory_kb,
+        total_memory_kb: total_kb,
+        free_memory_kb: free_kb,
+        available_memory_kb: available_kb,
         process_memory_kb,
     };
     let health_check_response = HealthCheckResponse {
@@ -68,23 +74,48 @@ pub async fn post_health() -> impl Responder {
     HttpResponse::MethodNotAllowed()
 }
 
-/// Reads the amount of free system memory (in KB) from `/proc/meminfo`.
+/// Reads system memory information from `/proc/meminfo`.
 ///
-/// This function is **Linux-specific** and parses the `MemFree` field
-/// from `/proc/meminfo`.
+/// Returns a tuple containing:
+/// 1. Total memory (KB)
+/// 2. Free memory (KB)
+/// 3. Available memory (KB)
+///
+/// This function is **Linux-specific**.
 ///
 /// # Panics
 /// Panics if `/proc/meminfo` cannot be read or parsed.
-#[tracing::instrument(name = "Get Free Memory.")]
-fn get_free_memory() -> u64 {
+#[tracing::instrument(name = "Get System Memory.")]
+fn get_system_memory() -> (u64, u64, u64) {
     let mem_info = fs::read_to_string("/proc/meminfo").expect("Failed to read /proc/meminfo");
 
-    mem_info
-        .lines()
-        .find(|line| line.starts_with("MemFree:"))
-        .and_then(|line| line.split_whitespace().nth(1))
+    let mut total = 0;
+    let mut free = 0;
+    let mut available = 0;
+
+    for line in mem_info.lines() {
+        if line.starts_with("MemTotal:") {
+            total = parse_meminfo_line(line);
+        } else if line.starts_with("MemFree:") {
+            free = parse_meminfo_line(line);
+        } else if line.starts_with("MemAvailable:") {
+            available = parse_meminfo_line(line);
+        }
+    }
+
+    // Fallback for older kernels where MemAvailable might not be present
+    if available == 0 {
+        available = free;
+    }
+
+    (total, free, available)
+}
+
+fn parse_meminfo_line(line: &str) -> u64 {
+    line.split_whitespace()
+        .nth(1)
         .and_then(|val| val.parse::<u64>().ok())
-        .expect("Failed to parse MemFree")
+        .unwrap_or(0)
 }
 
 /// Reads the current process's resident memory usage (in KB)
