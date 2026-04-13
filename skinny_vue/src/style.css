@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "preline/css/themes/theme.css";
+
+
+@source "../node_modules/preline/dist/*.js";
+
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/aspect-ratio";
+
+
