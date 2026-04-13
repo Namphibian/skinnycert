@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
+// Refreshed imports to resolve computed ReferenceError
 import { apiService } from '../services/api';
 import type { CertificateInfoResponse } from '../types/api';
 
 const certificates = ref<CertificateInfoResponse[]>([]);
+const selectedCertIds = ref<Set<string>>(new Set());
 const nextPageToken = ref<string | null>(null);
 const prevPageToken = ref<string | null>(null);
 const isFirstPage = ref(true);
@@ -38,6 +40,7 @@ const fetchCertificates = async (pageToken?: string | null, direction?: string) 
     
     const response = await apiService.getCertificates(params);
     certificates.value = response.items;
+    selectedCertIds.value.clear();
     nextPageToken.value = response.nextPageToken;
     prevPageToken.value = response.prevPageToken;
     
@@ -93,15 +96,76 @@ const deleteCertificate = async (id: string) => {
   try {
     await apiService.deleteCertificate(id);
     certificates.value = certificates.value.filter(c => c.id !== id);
+    selectedCertIds.value.delete(id);
   } catch (err: any) {
     alert('Failed to delete: ' + err.message);
   }
 };
 
+const deleteSelectedCertificates = async () => {
+  if (selectedCertIds.value.size === 0) return;
+  if (!confirm(`Are you sure you want to delete ${selectedCertIds.value.size} selected certificate(s)?`)) return;
+
+  loading.value = true;
+  const idsToDelete = Array.from(selectedCertIds.value);
+  const errors: string[] = [];
+
+  for (const id of idsToDelete) {
+    try {
+      await apiService.deleteCertificate(id);
+      certificates.value = certificates.value.filter(c => c.id !== id);
+      selectedCertIds.value.delete(id);
+    } catch (err: any) {
+      errors.push(`Failed to delete ${id}: ${err.message}`);
+    }
+  }
+
+  if (errors.length > 0) {
+    alert(errors.join('\n'));
+  }
+  loading.value = false;
+};
+
+const toggleSelectAll = (event: Event) => {
+  const checked = (event.target as HTMLInputElement).checked;
+  if (checked) {
+    certificates.value.forEach(cert => selectedCertIds.value.add(cert.id));
+  } else {
+    selectedCertIds.value.clear();
+  }
+};
+
+const toggleSelect = (id: string) => {
+  if (selectedCertIds.value.has(id)) {
+    selectedCertIds.value.delete(id);
+  } else {
+    selectedCertIds.value.add(id);
+  }
+};
+
+const isAllSelected = computed(() => {
+  return certificates.value.length > 0 && certificates.value.every(cert => selectedCertIds.value.has(cert.id));
+});
+
 const downloadCsr = (commonName: string | null, csrPem: string) => {
   const name = (commonName || 'certificate').replace(/\./g, '_');
   const filename = `${name}.csr`;
   const blob = new Blob([csrPem], { type: 'application/x-pem-file' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const downloadCert = (commonName: string | null, certPem: string | null) => {
+  if (!certPem) return;
+  const name = (commonName || 'certificate').replace(/\./g, '_');
+  const filename = `${name}.cert`;
+  const blob = new Blob([certPem], { type: 'application/x-pem-file' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -129,6 +193,10 @@ onMounted(fetchCertificates);
                   <p class="text-sm text-gray-600 dark:text-neutral-400">Manage your TLS certificates.</p>
                 </div>
                 <div class="flex items-center gap-x-2">
+                  <button v-if="selectedCertIds.size > 0" @click="deleteSelectedCertificates" type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:pointer-events-none focus:outline-none focus:ring-2 focus:ring-red-500">
+                    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    Delete Selected ({{ selectedCertIds.size }})
+                  </button>
                   <div class="inline-flex items-center gap-x-1.5">
                     <label for="limit" class="text-sm text-gray-600 dark:text-neutral-400">Show:</label>
                     <select id="limit" v-model="limit" @change="handleLimitChange" class="py-2 px-3 pe-9 block w-full border-gray-200 shadow-sm text-sm rounded-lg focus:border-blue-500 focus:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 dark:placeholder-neutral-500 dark:focus:ring-neutral-600">
@@ -198,6 +266,11 @@ onMounted(fetchCertificates);
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
                       <thead class="bg-gray-50 dark:bg-neutral-800">
                         <tr>
+                          <th scope="col" class="px-6 py-3 text-start">
+                            <div class="flex items-center">
+                              <input @change="toggleSelectAll" :checked="isAllSelected" type="checkbox" class="shrink-0 border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800">
+                            </div>
+                          </th>
                           <th scope="col" class="px-6 py-3 text-start text-xs font-semibold text-gray-800 uppercase tracking-wide dark:text-neutral-200">
                             Common Name
                           </th>
@@ -216,20 +289,28 @@ onMounted(fetchCertificates);
                           <th scope="col" class="px-6 py-3 text-start text-xs font-semibold text-gray-800 uppercase tracking-wide dark:text-neutral-200">
                             CSR
                           </th>
+                          <th scope="col" class="px-6 py-3 text-start text-xs font-semibold text-gray-800 uppercase tracking-wide dark:text-neutral-200">
+                            Certificate
+                          </th>
                           <th scope="col" class="px-6 py-3 text-end text-xs font-semibold text-gray-800 uppercase tracking-wide dark:text-neutral-200"></th>
                         </tr>
                       </thead>
                       <tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
                         <tr v-if="loading">
-                          <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Loading certificates...</td>
+                          <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">Loading certificates...</td>
                         </tr>
                         <tr v-else-if="error">
-                          <td colspan="7" class="px-6 py-4 text-center text-sm text-red-500 font-medium">Error: {{ error }}</td>
+                          <td colspan="9" class="px-6 py-4 text-center text-sm text-red-500 font-medium">Error: {{ error }}</td>
                         </tr>
                         <tr v-else-if="certificates.length === 0">
-                          <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">No certificates found.</td>
+                          <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">No certificates found.</td>
                         </tr>
                         <tr v-for="cert in certificates" :key="cert.id" class="hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors">
+                          <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                              <input @change="toggleSelect(cert.id)" :checked="selectedCertIds.has(cert.id)" type="checkbox" class="shrink-0 border-gray-200 rounded text-blue-600 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-700 dark:checked:bg-blue-500 dark:checked:border-blue-500 dark:focus:ring-offset-gray-800">
+                            </div>
+                          </td>
                           <td class="px-6 py-4 whitespace-nowrap">
                             <router-link :to="{ name: 'CertificateDetail', params: { id: cert.id } }" class="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400">
                               {{ cert.sans.commonName || 'N/A' }}
@@ -264,10 +345,15 @@ onMounted(fetchCertificates);
                             </span>
                           </td>
                           <td class="px-6 py-4 whitespace-nowrap">
-                            <button @click="downloadCsr(cert.sans.commonName, cert.pem.csrPem)" type="button" class="inline-flex items-center gap-x-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400">
+                            <button @click="downloadCsr(cert.sans.commonName, cert.pem.csrPem)" type="button" class="inline-flex items-center gap-x-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-500 dark:hover:text-blue-400" title="Download CSR">
                               <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-
                             </button>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                            <button v-if="cert.isSigned" @click="downloadCert(cert.sans.commonName, cert.pem.certPem)" type="button" class="inline-flex items-center gap-x-2 text-sm font-medium text-teal-600 hover:text-teal-800 dark:text-teal-500 dark:hover:text-teal-400" title="Download Certificate">
+                              <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                            </button>
+                            <span v-else class="text-xs text-gray-400 dark:text-neutral-600">N/A</span>
                           </td>
                           <td class="px-6 py-4 whitespace-nowrap text-end text-sm font-medium">
                             <button @click="deleteCertificate(cert.id)" class="inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent text-red-600 hover:text-red-800 focus:outline-none focus:text-red-800 disabled:opacity-50 disabled:pointer-events-none dark:text-red-500 dark:hover:text-red-400 dark:focus:text-red-400">

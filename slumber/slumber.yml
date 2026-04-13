@@ -92,6 +92,10 @@ requests:
         name: List All ECDSA Keys
         method: GET
         url: "{{ host }}/keys?algorithmType=ECDSA"
+      list_all_tls_secured:
+        name: List All Keys that are TLS Secured
+        method: GET
+        url: "{{ host }}/keys?algorithmStatus=tls_secure"
       get_key_by_id:
         name: Get By ID
         method: GET

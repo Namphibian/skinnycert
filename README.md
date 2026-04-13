@@ -1,3 +1,5 @@
+<img src="/assets/skinnycert.png" alt="Skinnycert Logo" width="200">
+
 # Skinnycert
 
 Industrial-strength TLS certificate API built in Rust.

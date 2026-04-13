@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+// Refreshed imports to resolve computed ReferenceError
 import { useRouter } from 'vue-router';
 import { apiService } from '../services/api';
 import type { KeyAlgorithmResponse, CreateCertificateRequest, CertificateInfoResponse } from '../types/api';
@@ -31,6 +32,36 @@ const form = ref<CreateCertificateRequest>({
 
 const sanInput = ref('');
 
+const downloadCert = (commonName: string | null, certPem: string | null) => {
+  if (!certPem) return;
+  const name = (commonName || 'certificate').replace(/\./g, '_');
+  const filename = `${name}.cert`;
+  const blob = new Blob([certPem], { type: 'application/x-pem-file' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const downloadCsr = (commonName: string | null, csrPem: string | null) => {
+  if (!csrPem) return;
+  const name = (commonName || 'certificate').replace(/\./g, '_');
+  const filename = `${name}.csr`;
+  const blob = new Blob([csrPem], { type: 'application/x-pem-file' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
 const addSan = () => {
   if (sanInput.value && !form.value.sans.includes(sanInput.value)) {
     form.value.sans.push(sanInput.value);
@@ -55,7 +86,7 @@ const handleSubmit = async () => {
 
 onMounted(async () => {
   try {
-    const algs = await apiService.getKeyAlgorithms();
+    const algs = await apiService.getKeyAlgorithms({ algorithmStatus: 'tls_secure' });
     algorithms.value = algs;
 
     if (props.id) {
@@ -172,6 +203,11 @@ onMounted(async () => {
             <input v-model="form.subject.locality" :disabled="isEditMode" type="text" class="py-2 px-3 block w-full border-gray-200 shadow-sm text-sm rounded-lg focus:border-blue-500 focus:ring-blue-500 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 disabled:opacity-50">
           </div>
 
+          <div class="col-span-12 sm:col-span-12">
+            <label class="inline-block text-sm font-medium text-gray-800 mt-2.5 dark:text-neutral-200">Email Address (Optional)</label>
+            <input v-model="form.subject.email" :disabled="isEditMode" type="email" placeholder="admin@example.com" class="py-2 px-3 block w-full border-gray-200 shadow-sm text-sm rounded-lg focus:border-blue-500 focus:ring-blue-500 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-400 disabled:opacity-50">
+          </div>
+
           <hr class="col-span-12 my-4 border-gray-200 dark:border-neutral-700">
 
           <!-- SANS -->
@@ -196,6 +232,14 @@ onMounted(async () => {
         </div>
 
         <div class="mt-8 flex justify-end gap-x-2">
+          <button v-if="isEditMode" @click="downloadCsr(certificate?.sans.commonName || null, certificate?.pem.csrPem || null)" type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 dark:bg-neutral-900 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-800">
+            <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Download CSR
+          </button>
+          <button v-if="isEditMode && certificate?.isSigned" @click="downloadCert(certificate?.sans.commonName || null, certificate?.pem.certPem || null)" type="button" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-semibold rounded-lg border border-transparent bg-teal-600 text-white hover:bg-teal-700">
+            <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            Download Certificate
+          </button>
           <router-link to="/certificates" class="py-2 px-3 inline-flex items-center gap-x-2 text-sm font-medium rounded-lg border border-gray-200 bg-white text-gray-800 shadow-sm hover:bg-gray-50 dark:bg-neutral-900 dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-800">
             {{ isEditMode ? 'Back' : 'Cancel' }}
           </router-link>
