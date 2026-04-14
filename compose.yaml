@@ -151,6 +151,20 @@ services:
       skinnycert:
         ipv4_address: 20.5.0.5
 
+  # -------------------------------
+  # Vue.js Frontend
+  # -------------------------------
+  skinny-vue:
+    build:
+      context: ./skinny_vue
+    container_name: skinnycert-vue
+    hostname: vue.svc.docker.local
+    ports:
+      - "8080:80"
+    networks:
+      skinnycert:
+        ipv4_address: 20.5.0.6
+
 # -------------------------------
 # Volumes
 # -------------------------------
