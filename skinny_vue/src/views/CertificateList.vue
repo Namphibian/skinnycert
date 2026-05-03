@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from 'vue';
 // Refreshed imports to resolve computed ReferenceError
 import { apiService } from '../services/api';
 import type { CertificateInfoResponse } from '../types/api';
+import { logger } from "@/utils/logger";
 
 const certificates = ref<CertificateInfoResponse[]>([]);
 const selectedCertIds = ref<Set<string>>(new Set());
@@ -24,6 +25,7 @@ const filters = ref({
 
 const fetchCertificates = async (pageToken?: string | null, direction?: string) => {
   loading.value = true;
+  logger.debug("Fetching certificates with params: ", { pageToken, direction, filters: filters.value });
   try {
     const params: Record<string, any> = {
       limit: limit.value
@@ -175,8 +177,8 @@ const downloadCert = (commonName: string | null, certPem: string | null) => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 };
-
 onMounted(fetchCertificates);
+logger.debug("Mounted CertificateList component and fetched certificates");
 </script>
 
 <template>
