@@ -51,6 +51,7 @@ pub async fn create_certificate(
 ) -> Result<impl Responder, actix_web::Error> {
     let key_repo = KeyAlgorithmRepository::new(pool.get_ref().clone());
     let create_certificate_request = payload.into_inner();
+    let key_algorithm_id = create_certificate_request.key_algorithm_id;
     create_certificate_request.validate().map_err(|e| {
         tracing::error!("Validation error: {:?}", e);
         actix_web::error::ErrorBadRequest("Validation error")
@@ -58,7 +59,7 @@ pub async fn create_certificate(
 
     // --- Lookup key algorithm ---
     let key_algorithm = key_repo
-        .find_by_id(create_certificate_request.key_algorithm_id)
+        .find_by_id(key_algorithm_id)
         .await
         .map_err(|e| {
             tracing::error!("Database error fetching key algorithm: {:?}", e);
@@ -67,7 +68,7 @@ pub async fn create_certificate(
         .ok_or_else(|| {
             tracing::error!(
                 "Key algorithm not found for ID: {}",
-                create_certificate_request.key_algorithm_id
+                key_algorithm_id
             );
             actix_web::error::ErrorNotFound("Key algorithm not found")
         })?;
@@ -81,17 +82,14 @@ pub async fn create_certificate(
     // --- Build CSR params (domain struct, not DTO) ---
     let csr_params = CsrGenerationParams {
         subject: CertificateSubjectFields {
-            organization: create_certificate_request.subject.organization.clone(),
-            organizational_unit: create_certificate_request
-                .subject
-                .organizational_unit
-                .clone(),
-            country: create_certificate_request.subject.country.clone(),
-            state_or_province: create_certificate_request.subject.state_or_province.clone(),
-            locality: create_certificate_request.subject.locality.clone(),
-            email: create_certificate_request.subject.email.clone(),
+            organization: create_certificate_request.subject.organization,
+            organizational_unit: create_certificate_request.subject.organizational_unit,
+            country: create_certificate_request.subject.country,
+            state_or_province: create_certificate_request.subject.state_or_province,
+            locality: create_certificate_request.subject.locality,
+            email: create_certificate_request.subject.email,
         },
-        sans: create_certificate_request.sans.clone(),
+        sans: create_certificate_request.sans,
     };
 
     // --- Generate CSR ---
@@ -107,20 +105,14 @@ pub async fn create_certificate(
             &csr_pem,
             &private_key_pem,
             &public_key_pem,
-            create_certificate_request.key_algorithm_id,
-            create_certificate_request.subject.organization.as_deref(),
-            create_certificate_request
-                .subject
-                .organizational_unit
-                .as_deref(),
-            create_certificate_request.subject.country.as_deref(),
-            create_certificate_request
-                .subject
-                .state_or_province
-                .as_deref(),
-            create_certificate_request.subject.locality.as_deref(),
-            create_certificate_request.subject.email.as_deref(),
-            create_certificate_request.sans.as_slice(),
+            key_algorithm_id,
+            csr_params.subject.organization.as_deref(),
+            csr_params.subject.organizational_unit.as_deref(),
+            csr_params.subject.country.as_deref(),
+            csr_params.subject.state_or_province.as_deref(),
+            csr_params.subject.locality.as_deref(),
+            csr_params.subject.email.as_deref(),
+            csr_params.sans.as_slice(),
         )
         .await;
     match cert_id {

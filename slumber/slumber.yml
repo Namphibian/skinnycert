@@ -64,7 +64,7 @@ requests:
           Content-Type: application/json
         body: | 
           { 
-            "key_algorithm_id": "c62abdb7-4d7b-43da-9e95-5f1f8b814ad9", 
+            "key_algorithm_id": "75233fb7-7338-4ec4-bbfd-ca4ea18be8cd", 
             "subject": 
               { 
                 "organization": "Example Corp", 

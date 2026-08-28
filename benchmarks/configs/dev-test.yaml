@@ -2,38 +2,39 @@
 execution:
   - scenario: rsa_scenario
     concurrency: 6
-    ramp-up: 10s
-    hold-for: 1m
+    ramp-up: 30s
+    hold-for: 5m
     executor: gatling
 
   - scenario: ecdsa_scenario
     concurrency: 6
-    ramp-up: 10s
-    hold-for: 1m
+    ramp-up: 30s
+    hold-for: 5m
     executor: gatling
 
 settings:
   env:
-    host: "https://gateway.svc.docker.local:9443"
+    host: "http://127.0.0.1:9090"
 
 scenarios:
 
   rsa_scenario:
-    default-address: "https://gateway.svc.docker.local:9443"
+    default-address: "http://127.0.0.1:9090"
     headers:
       Content-Type: application/json
 
     requests:
-
       - label: "RSA: GET /keys"
         method: GET
         url: "/keys?algorithmType=RSA&strength=2048"
         extract-jsonpath:
           rsa_2048_id: "[0].id"
+        # think-time: 100ms
 
       - label: "RSA: GET /keys/{id}/keypair"
         method: GET
         url: "/keys/${rsa_2048_id}/keypair"
+        # think-time: 100ms
 
       - label: "RSA: POST /certificates"
         method: POST
@@ -50,28 +51,30 @@ scenarios:
           sans:
             - "rsa.loadtest.example.com"
           validity_days: 365
+        # think-time: 100ms
 
       - label: "RSA: GET /certificates"
         method: GET
         url: "/certificates?algorithmType=RSA&limit=150&direction=next"
+        # think-time: 100ms
 
   ecdsa_scenario:
-    default-address: "https://gateway.svc.docker.local:9443"
+    default-address: "http://127.0.0.1:9090"
     headers:
       Content-Type: application/json
 
     requests:
-
       - label: "ECDSA: GET /keys"
         method: GET
         url: "/keys?algorithmType=ECDSA&strength=384"
         extract-jsonpath:
           ecdsa_id: "[0].id"
-
+        # think-time: 100ms
 
       - label: "ECDSA: GET /keys/{id}/keypair"
         method: GET
         url: "/keys/${ecdsa_id}/keypair"
+        # think-time: 100ms
 
       - label: "ECDSA: POST /certificates"
         method: POST
@@ -90,11 +93,12 @@ scenarios:
             - "ecdsa1.loadtest.example.com"
             - "ecdsa3.loadtest.example.com"
           validity_days: 365
+        # think-time: 100ms
 
       - label: "ECDSA: GET /certificates"
         method: GET
         url: "/certificates?algorithmType=ECDSA&limit=150&direction=next"
-
+        # think-time: 100ms
 
 reporting:
   - module: console
@@ -102,6 +106,24 @@ reporting:
 
 modules:
   gatling:
+#    java-opts:
+#      - "-Xms3G"
+#      - "-Xmx3G"
+#      - "-XX:+UseG1GC"
+#      - "-XX:MaxGCPauseMillis=100"
+#      - "-Djava.net.preferIPv4Stack=true"
+#      - "-Djava.net.preferIPv6Addresses=false"
+
     properties:
-      version: 3.13.5
-      download-link: "https://repo1.maven.org/maven2/io/gatling/highcharts/gatling-charts-highcharts-bundle/3.13.5/gatling-charts-highcharts-bundle-3.13.5-bundle.zip"
+      gatling-version: "3.15.1"
+      download-link: "https://repo1.maven.org/maven2/io/gatling/highcharts/gatling-charts-highcharts-bundle/3.15.1/gatling-charts-highcharts-bundle-3.15.1-bundle.zip"
+
+#      gatling.conf:
+#        gatling.http:
+#          dns:
+#            queryTimeout: 500
+#            maxQueriesPerResolve: 3
+#          socket:
+#            connectTimeout: 1000
+#            tcpNoDelay: true
+#            soKeepAlive: false

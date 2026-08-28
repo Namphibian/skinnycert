@@ -165,12 +165,12 @@ routes:
   - uri: /keys
     methods: [ "GET" ]
     service_id: 1
-    plugins:
-      basic-auth: { }
-      consumer-restriction:
-        rejected_msg: "Only authorized users can view this."
-        whitelist:
-          - public
+#    plugins:
+#      basic-auth: { }
+#      consumer-restriction:
+#        rejected_msg: "Only authorized users can view this."
+#        whitelist:
+#          - public
   - uri: /keys/*
     methods: [ "GET" ]
     service_id: 1

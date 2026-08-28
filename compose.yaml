@@ -47,7 +47,7 @@ services:
     environment:
       RUST_LOG: info
       SERVER_PORT: 9090
-      SERVER_ADDRESS: 127.0.0.1
+      SERVER_ADDRESS: 0.0.0.0
       WORKER_THREADS: 12
 
       # Database Configuration
@@ -133,23 +133,54 @@ services:
   benchmark:
     container_name: taurus
     hostname: taurus.svc.docker.local
+
+    # Run Gatling as your host user so artifacts are never root-owned
+    user: "1000:1000"
+
+    # Critical for high‑throughput Gatling (lots of sockets)
+    ulimits:
+      nofile: 1048576
+
     stdin_open: true
     tty: true
     image: blazemeter/taurus
     restart: always
-    entrypoint: /bin/sh
+
+    # Use bash so you can inject JVM/Gatling tuning via environment
+    entrypoint: /bin/bash
+
+    environment:
+      # JVM tuning for 4GB RAM injector
+      JAVA_OPTS: >
+        -Xms3G -Xmx3G
+        -XX:+UseG1GC
+        -XX:MaxGCPauseMillis=100
+        -Djava.net.preferIPv4Stack=true
+        -Djava.net.preferIPv6Addresses=false
+
+      # Disable IPv6 inside container (Gatling recommendation)
+#      JAVA_TOOL_OPTIONS: "-Djava.net.preferIPv4Stack=true"
+
     volumes:
       - type: bind
         source: ./benchmarks/configs
         target: /bzt-configs
         read_only: true
+
       - type: bind
         source: ./benchmarks/artifacts
         target: /tmp/artifacts
         read_only: false
+
+#      - type: bind
+#        source: ./benchmarks/bzt
+#        target: /home/ubuntu/.bzt
+#        read_only: false
+
     networks:
       skinnycert:
         ipv4_address: 20.5.0.5
+
 
   # -------------------------------
   # Vue.js Frontend

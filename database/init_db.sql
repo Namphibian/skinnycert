@@ -848,3 +848,14 @@ GROUP BY c.id,
          c.cert_uploaded_on,
          c.deleted_on;
 
+CREATE INDEX idx_certificate_sans_certid_sanorder
+    ON certificate_sans(certificate_id, san_order);
+
+CREATE INDEX idx_certificates_covering
+    ON certificates(id, key_algorithm_id, created_on, updated_on);
+
+
+CLUSTER public.certificates USING idx_certificates_covering;
+
+
+SET work_mem = '256MB';
